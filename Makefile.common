@@ -1,0 +1,51 @@
+ifeq ($(DEBUG), TRUE)
+	BUILDDIR = $(SRCBASE)/build/debug
+else
+	BUILDDIR = $(SRCBASE)/build/release
+endif
+OBJDIR = $(BUILDDIR)/obj/$(MODULE)
+LIBDIR = $(BUILDDIR)/lib
+BINDIR = $(BUILDDIR)/bin
+
+VPATH += $(MODSRCDIR)
+SRCOBJ = $(patsubst %.cpp, $(OBJDIR)/%.o, $(notdir $(SRCFILES)))
+
+ifeq ($(MAKELEVEL), 0)
+all : msg
+else
+all : lib bin
+endif
+
+lib : $(OBJDIR) $(LIBDIR)/$(SRCLIB)
+
+bin : $(OBJDIR) $(BINDIR)/$(SRCBIN)
+
+$(OBJDIR):
+	mkdir -p $@
+
+ifneq ($(SRCBIN),)
+$(BINDIR)/$(SRCBIN): $(SRCOBJ)
+	$(CXX) -o $@ $^ $(LDFLAGS)
+endif
+
+ifneq ($(SRCLIB),)
+$(LIBDIR)/$(SRCLIB): $(SRCOBJ)
+	$(AR) rcs $@ $^
+endif
+
+$(SRCOBJ): $(OBJDIR)/%.o: %.cpp
+	$(CXX) -c $(CXXFLAGS) $< -o $@
+
+msg:
+	@echo "Tis"
+
+clean:
+ifneq ($(SRCLIB),)
+	rm $(SRCOBJ) $(LIBDIR)/$(SRCLIB)
+endif
+ifneq ($(SRCBIN),)
+	rm $(SRCOBJ) $(BINDIR)/$(SRCBIN)
+endif
+
+.PHONY: all clean
+
