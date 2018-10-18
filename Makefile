@@ -1,5 +1,4 @@
 SRCDIR = src
-MODULES = $(shell ls $(SRCDIR))
 
 CXXFLAGS += -Wall -Werror -std=c++11
 
@@ -14,12 +13,18 @@ endif
 export CXXFLAGS
 export DEBUG
 
-all: $(BUILDDIR) $(MODULES)
+all: $(BUILDDIR)/bin $(BUILDDIR)/lib protocol test
 
-$(BUILDDIR):
-	mkdir -p $(BUILDDIR)/bin $(BUILDDIR)/lib
+$(BUILDDIR)/bin:
+	mkdir -p $@
 
-$(MODULES):
+$(BUILDDIR)/lib:
+	mkdir -p $@
+
+protocol:
+	make -C $(SRCDIR)/$@
+
+test: protocol
 	make -C $(SRCDIR)/$@
 
 clean:
@@ -27,4 +32,5 @@ clean:
 	do $(MAKE) -C $(SRCDIR)/$$subdir $@; \
 	done
 
-.PHONY: all clean
+
+.PHONY: all clean test protocol

@@ -1,7 +1,9 @@
-/** 
+/**
  * @file device.h
  * @brief Library supporting network device management.
  */
+
+#include <cstddef>
 
 /**
  * Add a device to the library for sending/receiving packets. 
@@ -19,3 +21,13 @@ int addDevice(const char* device);
  * was found.
  */
 int findDevice(const char* device);
+
+int removeDevice(const char* device);
+
+int removeDevice(int device_descriptor);
+
+int removeAllDevice();
+
+int sendPacketOnDevice(int device_descriptor, const void *buf, int size);
+
+int getDeviceMac(int device_descriptor, void *buf); 
