@@ -2,12 +2,14 @@ SRCDIR = src
 
 CXXFLAGS += -Wall -Werror -std=c++11
 
+BASEBUILDDIR = ./build
+
 ifeq ($(DEBUG), TRUE)
 	CXXFLAGS += -ggdb3 -O0
-	BUILDDIR = ./build/debug
+	BUILDDIR = $(BASEBUILDDIR)/debug
 else
 	CXXFLAGS += -O2
-	BUILDDIR = ./build/release
+	BUILDDIR = $(BASEBUILDDIR)/release
 endif
 
 export CXXFLAGS
@@ -28,9 +30,7 @@ test: protocol
 	make -C $(SRCDIR)/$@
 
 clean:
-	@for subdir in $(MODULES); \
-	do $(MAKE) -C $(SRCDIR)/$$subdir $@; \
-	done
+	rm -rf $(BASEBUILDDIR)
 
 
 .PHONY: all clean test protocol
