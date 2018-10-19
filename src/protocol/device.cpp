@@ -25,6 +25,7 @@ int defaultFrameReceiveCallback(const void* buf, int len, int id) {
 }
 
 struct handler_arg {
+    uint8_t mac[6];
     pcap_t* pcap;
     int id;
 };
@@ -32,8 +33,28 @@ struct handler_arg {
 frameReceiveCallback frCallback = defaultFrameReceiveCallback;
 
 void pcapHandler(u_char* user, const struct pcap_pkthdr *h, const u_char *byte) {
-    int id = *(int*)user;
+    handler_arg* arg = (handler_arg*)user;
+    int id = arg->id;
     char msgBuf[1000];
+    int ok = 1;
+    for (int i = 0; i < 6; ++i) {
+        if (byte[i] != 0xff) {
+            ok = 0;
+            break;
+        }
+    }
+    if (ok == 0) {
+        ok = 1;
+        for (int i = 0; i < 6; ++i) {
+            if (byte[i] != arg->mac[i]) {
+                ok = 0;
+                break;
+            }
+        }
+    }
+    if (ok == 0) {
+        return;
+    }
     if (h->len != h->caplen) {
         sprintf(msgBuf, "Abandon partial packet on id %d.", id);
         logPrint(WARNING, msgBuf);
@@ -47,7 +68,7 @@ void pcapHandler(u_char* user, const struct pcap_pkthdr *h, const u_char *byte) 
 
 void* listening_handler(void* arg) {
     handler_arg* device = (handler_arg*)arg;
-    pcap_loop(device->pcap, -1, pcapHandler, (u_char*)&(device->id));
+    pcap_loop(device->pcap, -1, pcapHandler, (u_char *)arg);
     free(arg);
     return NULL;
 }
@@ -71,6 +92,7 @@ device_t::device_t(std::string name, pcap_t* pcap)
     handler_arg* arg = (handler_arg*)malloc(sizeof(handler_arg));
     arg->pcap = pcap;
     arg->id = id;
+    memcpy(&(arg->mac), mac, 6);
     if (pthread_create(&listening_thread, NULL, listening_handler, arg) != 0) {
         logPrint(ERROR, std::string("Failed to create the listening thread for ") + name + ".");
         return;
