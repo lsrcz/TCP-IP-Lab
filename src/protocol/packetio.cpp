@@ -51,5 +51,6 @@ typedef int (*frameReceiveCallback)(const void*, int, int);
  * @see frameReceiveCallback
  */
 int setFrameReceiveCallback(frameReceiveCallback callback) {
-    return -1;
+    frCallback = callback;
+    return 0;
 }

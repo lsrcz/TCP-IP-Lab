@@ -1,8 +1,8 @@
 #include <protocol/device.h>
 #include <protocol/packetio.h>
-#include <test.h>
 #include <cstdint>
 #include <cstdio>
+#include <protocol/logutils.h>
 
 int testSendFrame() {
     const uint8_t buf[10] = {1,2,3,4,5,6,7,8,9,10};
@@ -15,11 +15,37 @@ int testSendFrame() {
     } else {
         printf("Successed to send a frame\n");
     }
+    removeDevice(dd);
+    return 0;
+}
+
+int printAllPacketCallback(const void* packet, int len, int user) {
+    if (*((uint8_t*)packet + 23) == 1) {
+        char buf[100000];
+        sprintf(buf, "ICMP packet of length %d received on id %d.", len, user);
+        logPrint(DEBUG, buf);
+        for (int i = 0; i < len; ++i) {
+            if (i != 0)
+                printf(" ");
+            printf("%.2x", *((uint8_t*)packet + i));
+        }
+        printf("\n");
+    }
+    return 0;
+}
+
+int testRecvFrame() {
+    setFrameReceiveCallback(printAllPacketCallback);
+    int id = addDevice("ens33");
+    sleep(20);
+    removeDevice(id);
     return 0;
 }
 
 int main() {
+    logPrint(DEBUG, "test send frame");
     if (testSendFrame() < 0)
         return -1;
+    testRecvFrame();
     return 0;
 }

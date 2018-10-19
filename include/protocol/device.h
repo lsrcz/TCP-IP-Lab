@@ -17,10 +17,6 @@
 #include <pcap.h>
 #include <cstring>
 
-typedef void (*packetReceiveCallback)(const void*, int, int);
-
-extern packetReceiveCallback prCallback;
-
 struct device_t {
     static int avaliable_id;
     int is_properly_inited = 0;

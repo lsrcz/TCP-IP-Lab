@@ -19,13 +19,9 @@
 
 std::list<device_t> devices;
 
-void defaultPacketReceiveCallback(const void* buf, int len, int id) {
+int defaultFrameReceiveCallback(const void* buf, int len, int id) {
     printf("Packet of length %d received on id %d\n", len, id);
-    /*for (int i = 0; i < len; ++i) {
-        printf("%.2x ", *(((uint8_t*)buf) + i));
-    }
-    printf("\n");
-    */
+    return 0;
 }
 
 struct handler_arg {
@@ -33,7 +29,7 @@ struct handler_arg {
     int id;
 };
 
-packetReceiveCallback prCallback = &defaultPacketReceiveCallback;
+frameReceiveCallback frCallback = defaultFrameReceiveCallback;
 
 void pcapHandler(u_char* user, const struct pcap_pkthdr *h, const u_char *byte) {
     int id = *(int*)user;
@@ -43,7 +39,10 @@ void pcapHandler(u_char* user, const struct pcap_pkthdr *h, const u_char *byte) 
         logPrint(WARNING, msgBuf);
         return;
     }
-    prCallback(byte, h->caplen, id);
+    if (frCallback(byte, h->caplen, id) < 0) {
+        sprintf(msgBuf, "Frame receive callback failed on %d.", id);
+        logPrint(ERROR, msgBuf);
+    }
 }
 
 void* listening_handler(void* arg) {

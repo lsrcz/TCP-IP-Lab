@@ -1,7 +1,6 @@
 #include <protocol/device.h>
 #include <pcap/pcap.h>
 #include <cstdio>
-#include <test.h>
 #include <vector>
 #include <string>
 
