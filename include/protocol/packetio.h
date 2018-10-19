@@ -2,7 +2,8 @@
  * @file packetio.h
  * @brief Library supporting sending/receiving Ethernet II frames.
  */
-
+#ifndef PACKETIO_H
+#define PACHETIO_H
 #include <netinet/ether.h>
 
 /** 
@@ -40,3 +41,4 @@ typedef int (*frameReceiveCallback)(const void*, int, int);
  * @see frameReceiveCallback
  */
 int setFrameReceiveCallback(frameReceiveCallback callback);
+#endif

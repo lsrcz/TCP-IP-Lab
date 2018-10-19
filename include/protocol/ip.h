@@ -3,7 +3,8 @@
  * @brief Library supporting sending/receiving IP packets encapsuled in an 
  * Ethernet II frame.
  */
-
+#ifndef IP_H
+#define IP_H
 #include <netinet/ip.h>
 
 /**
@@ -51,3 +52,4 @@ int setIPPacketReceiveCallback(IPPacketReceiveCallback callback);
  */
 int setRoutingTable(const struct in_addr dest, const struct in_addr mask, 
     const void* nextHopMAC, const char *device);
+#endif

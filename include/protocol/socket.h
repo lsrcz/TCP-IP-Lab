@@ -2,7 +2,8 @@
  * @file socket.h
  * @brief POSIX-compatble socket library supporting TCP protocol on IPv4.
  */
- 
+#ifndef SOCKET_H
+#define SOCKET_H
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -65,3 +66,4 @@ ssize_t __wrap_close(int fildes);
 int __wrap_getaddrinfo(const char *node, const char *service,
     const struct addrinfo *hints,
     struct addrinfo **res);
+#endif 
