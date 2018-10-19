@@ -1,7 +1,7 @@
 #include <protocol/device.h>
 #include <pcap/pcap.h>
 #include <cstdio>
-#include <testDevice.h>
+#include <test.h>
 #include <vector>
 #include <string>
 
@@ -55,14 +55,14 @@ int testManageDevice() {
                 return -1;
             }
             int t = addDevice(succ[1].c_str());
-            if (t == 0) {
+            if (t != 0) {
                 printf("Success to add the device %s, id is %d\n", succ[1].c_str(), t);
             } else {
                 printf("Failed to add the device %s, return value is %d\n", succ[1].c_str(), t);
                 return -1;
             }
             t = addDevice(succ[0].c_str());
-            if (t == 1) {
+            if (t != 0) {
                 printf("Success to add the device %s, id is %d\n", succ[0].c_str(), t);
             } else {
                 printf("Failed to add the device %s, return value is %d\n", succ[0].c_str(), t);
@@ -131,10 +131,10 @@ int testMac() {
     return (oknum > 0);
 }
 
-int testDevice() {
+int main() {
     if (testManageDevice() < 0)
         return -1;
     if (testMac() < 0)
         return -1;
-    return 1;
+    return 0;
 }

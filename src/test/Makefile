@@ -5,18 +5,18 @@ MODULE = test
 include $(SRCBASE)/Makefile.common
 
 CXXFLAGS += -I$(SRCBASE)/include -I. -I./include
-LDFLAGS += -lpcap -L$(LIBDIR) -lprotocol
+LDFLAGS += -L$(LIBDIR) -lprotocol -lpthread -lpcap
 
 SRCFILES = $(wildcard *.cpp)
 #SRCOBJ = $(SRCFILES:.cpp=.o)
-SRCBIN = basicTests
+SRCBIN = $(patsubst %.cpp, $(BINDIR)/%, $(notdir $(SRCFILES)))
 
 all: $(OBJDIR) $(BINDIR)/$(SRCBIN)
 
 $(OBJDIR):
 	mkdir -p $@
 
-$(BINDIR)/$(SRCBIN): $(SRCOBJ)
+$(SRCBIN): $(BINDIR)/%: $(OBJDIR)/%.o
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 $(SRCOBJ): $(OBJDIR)/%.o: $(MODSRCDIR)/%.cpp
