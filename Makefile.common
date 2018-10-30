@@ -13,12 +13,20 @@ endif
 OBJDIR = $(BUILDDIR)/obj/$(MODULE)
 LIBDIR = $(BUILDDIR)/lib
 BINDIR = $(BUILDDIR)/bin
+DEPDIR = $(BUILDDIR)/dep/$(MODULE)
 
 VPATH += $(MODSRCDIR)
 CPPFILES = $(wildcard *.cpp)
 OBJS = $(patsubst %.cpp, $(OBJDIR)/%.o, $(notdir $(CPPFILES)))
+DEPS = $(patsubst %.cpp, $(DEPDIR)/%.dep, $(notdir $(CPPFILES)))
 
 all: $(OBJDIR) $(BINS) $(LIBS)
+
+$(OBJDIR):
+	mkdir -p $@
+
+$(DEPDIR):
+	mkdir -p $@
 
 $(LIBS): $(OBJS)
 	$(AR) rcs $@ $^
@@ -29,8 +37,13 @@ $(BINS): $(BINDIR)/%: $(OBJDIR)/%.o
 $(OBJS): $(OBJDIR)/%.o: $(MODSRCDIR)/%.cpp
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 
-$(OBJDIR):
-	mkdir -p $@
+$(DEPS): $(DEPDIR)/%.dep: $(MODSRCDIR)/%.cpp $(DEPDIR)
+	@set -e ; \
+  echo "$(patsubst $(DEPDIR)/%.dep, $(OBJDIR)/%.o, $@)";\
+  echo $<;\
+	$(CXX) -MT"$(patsubst $(DEPDIR)/%.dep, $(OBJDIR)/%.o, $@)" -MM $< $(CXXFLAGS) > $@
+
+-include $(DEPS)
 
 clean:
 	$(RM) -f $(OBJS) $(BINS) $(LIBS)

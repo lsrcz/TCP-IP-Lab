@@ -15,7 +15,7 @@ export BUILDDIR
 SUBBUILDDIR = bin lib obj
 BUILDDIRS = $(patsubst %,$(BUILDDIR)/%,$(SUBBUILDDIR))
 
-BUILDPHASES = libprotocol libutils test
+BUILDPHASES = libutils libprotocol test
 
 all: builddir
 	for d in $(BUILDPHASES) ; do \
@@ -23,6 +23,7 @@ all: builddir
 		make -C $(SRCDIR)/$$d ; \
 	done \
 
+test: libutils libprotocol
 $(BUILDPHASES): builddir
 	make -C $(SRCDIR)/$@
 
@@ -42,4 +43,5 @@ ycmtag: YCM-Generator
 	rm .ycm_extra_conf.py
 	./YCM-Generator/config_gen.py .
 
-.PHONY: all clean distclean test protocol ycmtag
+.PHONY: all builddir clean distclean ycmtag
+.PHONY: $(BUILDPHASES)

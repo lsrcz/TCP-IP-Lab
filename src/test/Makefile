@@ -1,7 +1,7 @@
 SRCBASE = ../..
 MODULE = test
 
-LDFLAGS += -L$(LIBDIR) -lprotocol -lpthread -lpcap
+LDFLAGS += -L$(LIBDIR) -lprotocol -lutils -lpthread -lpcap
 
 BINS = $(patsubst %.cpp, $(BINDIR)/%, $(notdir $(CPPFILES)))
 
