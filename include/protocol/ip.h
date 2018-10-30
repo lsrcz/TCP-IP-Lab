@@ -38,7 +38,8 @@ typedef int (*IPPacketReceiveCallback)(const void* buf, int len);
  * @return 0 on success, -1 on error.
  * @see IPPacketReceiveCallback
  */
-int setIPPacketReceiveCallback(IPPacketReceiveCallback callback);
+// I modified the function prototype to support multiple transport layer protocols
+int setIPPacketReceiveCallback(int protocol, IPPacketReceiveCallback callback);
 
 /**
  * @brief Manully add an item to routing table. Useful when talking with real 
@@ -52,4 +53,8 @@ int setIPPacketReceiveCallback(IPPacketReceiveCallback callback);
  */
 int setRoutingTable(const struct in_addr dest, const struct in_addr mask, 
     const void* nextHopMAC, const char *device);
+
+int IPInit();
+
+bool IPIsInit();
 #endif
