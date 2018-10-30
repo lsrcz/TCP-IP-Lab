@@ -6,7 +6,7 @@
 #define DEVICE_H
 
 #include <pcap/pcap.h>
-#include <protocol/logutils.h>
+#include <utils/logutils.h>
 #include <cstddef>
 #include <string>
 #include <list>

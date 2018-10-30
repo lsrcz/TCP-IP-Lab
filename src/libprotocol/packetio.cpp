@@ -1,7 +1,7 @@
 #include <protocol/device.h>
 #include <protocol/packetio.h>
 #include <net/ethernet.h>
-#include <protocol/netutils.h>
+#include <utils/netutils.h>
 #include <cstring>
 #include <cstdlib>
 #include <cstdint>

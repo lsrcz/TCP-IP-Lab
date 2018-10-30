@@ -1,8 +1,8 @@
 #include <protocol/ip.h>
 #include <protocol/device.h>
-#include <protocol/netutils.h>
+#include <utils/netutils.h>
 #include <protocol/packetio.h>
-#include <protocol/logutils.h>
+#include <utils/logutils.h>
 #include <net/ethernet.h>
 #include <cstdint>
 #include <cstring>

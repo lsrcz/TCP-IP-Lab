@@ -1,7 +1,7 @@
 #include <protocol/device.h>
 #include <protocol/packetio.h>
-#include <protocol/netutils.h>
-#include <protocol/logutils.h>
+#include <utils/netutils.h>
+#include <utils/logutils.h>
 #include <unordered_map>
 #include <vector>
 #include <string>

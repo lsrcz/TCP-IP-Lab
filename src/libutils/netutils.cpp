@@ -1,4 +1,4 @@
-#include <protocol/netutils.h>
+#include <utils/netutils.h>
 #include <cstdint>
 
 union htonl_helper {
