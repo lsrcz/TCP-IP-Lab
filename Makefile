@@ -32,5 +32,7 @@ test: protocol
 clean:
 	rm -rf $(BASEBUILDDIR)
 
+ycmtag: YCM-Generator
+	./YCM-Generatori/config_gen.py .
 
-.PHONY: all clean test protocol
+.PHONY: all clean test protocol ycmtag

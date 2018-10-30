@@ -1,2 +1,4 @@
 build/
+YCM-Generator/
+.ycm_extra_conf.py
 .#*
