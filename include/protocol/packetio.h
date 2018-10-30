@@ -46,4 +46,4 @@ int packetioInit();
 
 bool packetioIsInit();
 
-#endif
+#endif // PACKETIO_H

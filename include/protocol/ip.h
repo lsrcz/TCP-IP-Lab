@@ -57,4 +57,4 @@ int setRoutingTable(const struct in_addr dest, const struct in_addr mask,
 int IPInit();
 
 bool IPIsInit();
-#endif
+#endif // IP_H
