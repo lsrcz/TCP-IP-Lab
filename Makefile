@@ -33,6 +33,6 @@ clean:
 	rm -rf $(BASEBUILDDIR)
 
 ycmtag: YCM-Generator
-	./YCM-Generatori/config_gen.py .
+	./YCM-Generator/config_gen.py .
 
 .PHONY: all clean test protocol ycmtag
