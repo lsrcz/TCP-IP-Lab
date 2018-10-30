@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <cstdint>
 
+bool packetioInitFlag = false;
 /** 
  * @brief Encapsule some data into an Ethernet II frame and send it.
  *
@@ -42,6 +43,9 @@ int sendFrame(const void* buf, int len,
  */
 typedef int (*frameReceiveCallback)(const void*, int, int);
 
+frameReceiveCallback frCallback = NULL;
+pthread_rwlock_t *frCallbackRwlock;
+
 /**
  * @brief Register a callback function to be called each time an Ethernet II 
  * frame was received.
@@ -53,4 +57,18 @@ typedef int (*frameReceiveCallback)(const void*, int, int);
 int setFrameReceiveCallback(frameReceiveCallback callback) {
     frCallback = callback;
     return 0;
+}
+
+int packetioInit() {
+    if (packetioInitFlag)
+        return 0;
+    if (pthread_rwlock_init(frCallbackRwlock, NULL) != 0) {
+        logPrint(FATAL, "Unable to init packetio, rwlock init failed.");
+        return -1;
+    }
+    return 0;
+}
+
+bool packetioIsInit() {
+    return packetioInitFlag;
 }

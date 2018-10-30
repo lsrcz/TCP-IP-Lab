@@ -42,5 +42,8 @@ typedef int (*frameReceiveCallback)(const void*, int, int);
  */
 int setFrameReceiveCallback(frameReceiveCallback callback);
 
-extern frameReceiveCallback frCallback;
+int packetioInit();
+
+bool packetioIsInit();
+
 #endif

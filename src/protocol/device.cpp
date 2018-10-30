@@ -19,18 +19,13 @@
 
 std::list<device_t> devices;
 
-int defaultFrameReceiveCallback(const void* buf, int len, int id) {
-    printf("Packet of length %d received on id %d\n", len, id);
-    return 0;
-}
+extern frameReceiveCallback frCallback;
 
 struct handler_arg {
     uint8_t mac[6];
     pcap_t* pcap;
     int id;
 };
-
-frameReceiveCallback frCallback = defaultFrameReceiveCallback;
 
 void pcapHandler(u_char* user, const struct pcap_pkthdr *h, const u_char *byte) {
     handler_arg* arg = (handler_arg*)user;
@@ -205,6 +200,12 @@ int findDevice(const char* device) {
     if (iter == devices.end())
         return -1;
     return iter->id;
+}
+
+int getFirstDevice() {
+    if (devices.empty())
+        return -1;
+    return devices.front().id;
 }
 
 int removeDevice(const char* device) {
