@@ -1,30 +1,6 @@
 SRCBASE = ../..
-MODSRCDIR = .
-MODULE = protocol
+MODULE = libprotocol
+
+LIBS = $(LIBDIR)/libprotocol.a
 
 include $(SRCBASE)/Makefile.common
-
-CXXFLAGS += -I$(SRCBASE)/include
-
-SRCFILES = $(wildcard *.cpp)
-#SRCOBJ = $(SRCFILES:.cpp=.o)
-SRCLIB = libprotocol.a
-
-all: $(OBJDIR) $(LIBDIR)/$(SRCLIB)
-
-$(OBJDIR):
-	mkdir -p $@
-
-$(LIBDIR)/$(SRCLIB): $(SRCOBJ)
-	$(AR) rcs $@ $^
-
-$(SRCOBJ): $(OBJDIR)/%.o: %.cpp
-	@echo $(SRCOBJ)
-	@echo $(OBJDIR)
-	$(CXX) -c $(CXXFLAGS) $< -o $@
-
-clean:
-	$(RM) -f $(SRCOBJ) $(LIBDIR)/$(SRCLIB)
-
-.PHONY: all clean
-

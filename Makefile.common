@@ -1,12 +1,38 @@
+MODSRCDIR = .
+
+CXXFLAGS += -I$(SRCBASE)/include
+
 ifeq ($(DEBUG), TRUE)
+	CXXFLAGS += -ggdb3 -O0
 	BUILDDIR = $(SRCBASE)/build/debug
 else
+	CXXFLAGS += -O2
 	BUILDDIR = $(SRCBASE)/build/release
 endif
+
 OBJDIR = $(BUILDDIR)/obj/$(MODULE)
 LIBDIR = $(BUILDDIR)/lib
 BINDIR = $(BUILDDIR)/bin
 
 VPATH += $(MODSRCDIR)
-SRCOBJ = $(patsubst %.cpp, $(OBJDIR)/%.o, $(notdir $(SRCFILES)))
+CPPFILES = $(wildcard *.cpp)
+OBJS = $(patsubst %.cpp, $(OBJDIR)/%.o, $(notdir $(CPPFILES)))
 
+all: $(OBJDIR) $(BINS) $(LIBS)
+
+$(LIBS): $(OBJS)
+	$(AR) rcs $@ $^
+
+$(BINS): $(BINDIR)/%: $(OBJDIR)/%.o
+	$(CXX) -o $@ $^ $(LDFLAGS)
+
+$(OBJS): $(OBJDIR)/%.o: $(MODSRCDIR)/%.cpp
+	$(CXX) -c $(CXXFLAGS) $< -o $@
+
+$(OBJDIR):
+	mkdir -p $@
+
+clean:
+	$(RM) -f $(OBJS) $(BINS) $(LIBS)
+
+.PHONY: all clean
