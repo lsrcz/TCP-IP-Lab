@@ -36,7 +36,7 @@ int sendIPPacket(const struct in_addr src, const struct in_addr dest,
     hdr.ip_sum = htonl16(ch.s[0] + ch.s[1]);
     int id = getFirstDevice();
     if (id < 0) {
-        logPrint(ERROR, "No available devices.");
+        //logPrint(ERROR, "No available devices.");
         return -1;
     }
     uint8_t* ipbuf = (uint8_t*)malloc(len + 20);
@@ -66,14 +66,14 @@ int defaultFrameReceiveCallback(const void* buf, int len, int id) {
 int IPInit() {
     if (!packetioIsInit()) {
         if (packetioInit() != 0) {
-            logPrint(FATAL, "Unable to init IP, packetio init failed.");
+            //logPrint(FATAL, "Unable to init IP, packetio init failed.");
             return -1;
         }
     }
     if (IPIsInit())
         return 0;
     if (pthread_rwlock_init(IPCallbackVectorRwlock, NULL) != 0) {
-        logPrint(FATAL, "Unable to init IP, rwlock init failed.");
+        //logPrint(FATAL, "Unable to init IP, rwlock init failed.");
         return -1;
     }
     return setFrameReceiveCallback(defaultFrameReceiveCallback);

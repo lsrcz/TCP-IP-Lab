@@ -63,7 +63,7 @@ int packetioInit() {
     if (packetioInitFlag)
         return 0;
     if (pthread_rwlock_init(frCallbackRwlock, NULL) != 0) {
-        logPrint(FATAL, "Unable to init packetio, rwlock init failed.");
+        // logPrint(FATAL, "Unable to init packetio, rwlock init failed.");
         return -1;
     }
     return 0;

@@ -2,7 +2,7 @@
 #define LOGUTILS_H
 #include <string>
 
-enum LogLevel {
+enum class LogLevel: int {
     FATAL,
     ERROR,
     WARNING,

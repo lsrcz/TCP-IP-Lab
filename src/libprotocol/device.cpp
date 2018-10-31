@@ -52,12 +52,12 @@ void pcapHandler(u_char* user, const struct pcap_pkthdr *h, const u_char *byte) 
     }
     if (h->len != h->caplen) {
         sprintf(msgBuf, "Abandon partial packet on id %d.", id);
-        logPrint(WARNING, msgBuf);
+        //logPrint(WARNING, msgBuf);
         return;
     }
     if (frCallback(byte, h->caplen, id) < 0) {
         sprintf(msgBuf, "Frame receive callback failed on %d.", id);
-        logPrint(ERROR, msgBuf);
+        //logPrint(ERROR, msgBuf);
     }
 }
 
@@ -73,13 +73,13 @@ device_t::device_t(std::string name, pcap_t* pcap)
     : name(name), id(avaliable_id++), pcap(pcap) {
     int socketfd = pcap_get_selectable_fd(pcap);
     if (socketfd < 0) {
-        logPrint(ERROR, std::string("Can't get the MAC address of ") + name + ".");
+        //logPrint(ERROR, std::string("Can't get the MAC address of ") + name + ".");
         return;
     }
     struct ifreq ifr;
     strcpy(ifr.ifr_name, name.c_str());
     if (ioctl(socketfd, SIOCGIFHWADDR, &ifr) == -1) {
-        logPrint(ERROR, std::string("Can't get the MAC address of ") + name + ".");
+        //logPrint(ERROR, std::string("Can't get the MAC address of ") + name + ".");
         return;
     }
     memcpy(mac, ifr.ifr_hwaddr.sa_data, 6);
@@ -89,7 +89,7 @@ device_t::device_t(std::string name, pcap_t* pcap)
     arg->id = id;
     memcpy(&(arg->mac), mac, 6);
     if (pthread_create(&listening_thread, NULL, listening_handler, arg) != 0) {
-        logPrint(ERROR, std::string("Failed to create the listening thread for ") + name + ".");
+        //logPrint(ERROR, std::string("Failed to create the listening thread for ") + name + ".");
         return;
     }
     holding_thread = 1;
@@ -123,12 +123,12 @@ device_t& device_t::operator=(device_t&& rhs) {
 }
 device_t::~device_t() {
     if (holding_thread) {
-        logPrint(INFO, std::string("Destroying listening thread for ") + name + ".");
+        //logPrint(INFO, std::string("Destroying listening thread for ") + name + ".");
         pthread_cancel(listening_thread);
         pthread_join(listening_thread, NULL);
     }
     if (pcap != NULL) {
-        logPrint(INFO, std::string("Destroying pcap handler for ") + name + ".");
+        //logPrint(INFO, std::string("Destroying pcap handler for ") + name + ".");
         pcap_close(pcap);
     }
 }
@@ -143,12 +143,12 @@ int addDevice(const char* device) {
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t *pcap_dev = pcap_create(device, errbuf);
     if (pcap_dev == NULL) {
-        logPrint(ERROR, std::string("Failed to open the device ") + device + ".");
+        //logPrint(ERROR, std::string("Failed to open the device ") + device + ".");
         return -1;
     }
     if (pcap_activate(pcap_dev) != 0) {
         pcap_close(pcap_dev);
-        logPrint(ERROR, std::string("Failed to activate the device ") + device + ".");
+        //logPrint(ERROR, std::string("Failed to activate the device ") + device + ".");
         return -1;
     }
     int *dlt_p;
@@ -163,7 +163,7 @@ int addDevice(const char* device) {
     pcap_free_datalinks(dlt_p);
     if (support_ether == 0) {
         pcap_close(pcap_dev);
-        logPrint(ERROR, std::string("The device ") + device + " doesn't support ethernet.");
+        //logPrint(ERROR, std::string("The device ") + device + " doesn't support ethernet.");
         return -1;
     }
     devices.push_back({device, pcap_dev});
