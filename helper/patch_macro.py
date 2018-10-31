@@ -30,26 +30,26 @@ def process_macro(macro):
         if params[-1] == '...':
             return formatmacro(macro)
         macro1 = ['#define ' + name + '(' + ', '.join(params) + ', ...) ({',
-                  'ErrorBehavior _ebo = defaultBehavior("");',
-                  '_' + name + '(' + ', '.join(params) +  ', ##__VA_ARGS__, _ebo);',
+                  'ErrorBehavior _ebo = ErrorBehavior("");',
+                  '_' + name + '(' + ', '.join(params) +  ', ##__VA_ARGS__, _ebo, exit(0));',
                   '})']
-        macro2 = ['#define _' + name + '(' + ', '.join(params) + ', _behavior, ...)',
+        macro2 = ['#define _' + name + '(' + ', '.join(params) + ', _behavior, _action, ...)',
                   '({',
                   'ErrorBehavior _eb = _behavior;',
                   '_eb.sys_msg = "' + name + '";']
     else:
         macro1 = ['#define ' + name + '(...) ({',
-                  'ErrorBehavior _ebo = defaultBehavior("");',
-                  '_' + name + '(##__VA_ARGS__, _ebo);',
+                'ErrorBehavior _ebo = ErrorBehavior("");',
+                  '_' + name + '(##__VA_ARGS__, _ebo, exit(0));',
                   '})']
-        macro2 = ['#define _' + name + '(_behavior, ...)',
+        macro2 = ['#define _' + name + '(_behavior, _action, ...)',
                   '({',
                   'ErrorBehavior _eb = _behavior;'
                   '_eb.sys_msg = "' + name + '";']
     for line in macro[1:]:
         if line.startswith('ERROR_SYSTEM'):
-            macro2.insert(3, '_eb.from = ErrorBehavior::ErrorSource::SYSTEM;')
-            macro2.append('ERROR_WITH_BEHAVIOR(_eb);');
+            macro2.insert(3, '_eb.from = SOURCE_SYSTEM;')
+            macro2.append('ERROR_WITH_BEHAVIOR(_eb, _action);');
         else:
             macro2.append(line)
             

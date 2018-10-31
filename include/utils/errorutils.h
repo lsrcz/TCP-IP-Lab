@@ -6,74 +6,74 @@
 #include <string.h>
 #include <pcap.h>
 
+enum ErrorSource {
+    SOURCE_SYSTEM,
+    SOURCE_PCAP,
+    SOURCE_USER
+};
+
+enum ActionType {
+    NOACTION,
+    USER_ACTION,
+    RETURN_MINUS_ONE,
+    RETURN_ZERO,
+    NORMAL_EXIT,
+    EXIT_MINUS_ONE
+};
+
 struct ErrorBehavior {
     const char *msg;
     const char *sys_msg;
-
-    enum class ErrorSource {
-        SYSTEM,
-        PCAP,
-        USER
-    } from;
-
-    enum class FatalFlag {
-        FATAL,
-        ERROR
-    } fatalFlag;
-
+    bool fatalFlag;
+    ErrorSource from;
+    ActionType actionType;
     pcap_t *pcap;
 
-    inline ErrorBehavior(const char *msg, ErrorSource from,  FatalFlag fatalFlag)
-        : msg(msg), from(from), fatalFlag(fatalFlag) {}
+    inline ErrorBehavior(const char *msg,
+                         bool fatalFlag = false,
+                         ActionType actionType = NOACTION,
+                         ErrorSource from = SOURCE_USER,
+                         const char *sys_msg = "",
+                         pcap_t *pcap = NULL)
+        : msg(msg), from(from), fatalFlag(fatalFlag),
+        actionType(actionType), sys_msg(sys_msg), pcap(pcap) {}
 
-    inline void setMsg(const char *msg) {
-        this->msg = msg;
-    }
-
-    inline void setSysMsg(const char *sys_msg) {
-        this->sys_msg = sys_msg;
-    }
-
-    inline void setSource(ErrorSource from) {
-        this->from = from;
-    }
-
-    inline void setFatal(FatalFlag fatalFlag) {
-        this->fatalFlag = fatalFlag;
-    }
-
-    inline void setPcap(pcap_t *pcap) {
-        this->pcap = pcap;
-    }
 };
 
-inline ErrorBehavior defaultBehavior(const char *msg) {
-    return ErrorBehavior(msg,ErrorBehavior::ErrorSource::USER,ErrorBehavior::FatalFlag::ERROR);
-}
-inline ErrorBehavior fatalBehavior(const char *msg) {
-    return ErrorBehavior(msg,ErrorBehavior::ErrorSource::USER,ErrorBehavior::FatalFlag::FATAL);
-}
-
-#define ERROR_WITH_BEHAVIOR(behavior) { \
-    LogLevel lv = LogLevel::ERROR;\
-    if (behavior.fatalFlag == ErrorBehavior::FatalFlag::FATAL) {\
-        lv = LogLevel::FATAL;\
+#define ERROR_WITH_BEHAVIOR(behavior, action) {        \
+    LogLevel _lv = LogLevel::ERROR;\
+    if ((behavior).fatalFlag) {    \
+        _lv = LogLevel::FATAL;\
     }                                               \
-    const char *msg = behavior.msg;\
-    const char *sys_msg = behavior.sys_msg;\
-    switch (behavior.from) {\
-    case ErrorBehavior::ErrorSource::SYSTEM:\
-        LOG(lv, std::string(msg) + " \033[36m[" + sys_msg + ": " + strerror(errno) + "]\033[0m"); \
+    const char *_msg = (behavior).msg;              \
+    const char *_sys_msg = (behavior).sys_msg;  \
+    switch ((behavior).from) {                  \
+    case SOURCE_SYSTEM:\
+        LOG(_lv, std::string(_msg) + " \033[36m[" + _sys_msg + ": " + strerror(errno) + "]\033[0m"); \
         break;\
-    case ErrorBehavior::ErrorSource::PCAP:\
-        LOG(lv, std::string(msg) + " \033[36m[" + sys_msg + ": " + pcap_geterr(behavior.pcap) + "]\033[0m");       \
+    case SOURCE_PCAP:\
+        LOG(_lv, std::string(_msg) + " \033[36m[" + _sys_msg + ": " + pcap_geterr((behavior).pcap) + "]\033[0m"); \
         break;\
-    case ErrorBehavior::ErrorSource::USER:\
-        LOG(lv, std::string(msg));     \
+    case SOURCE_USER:\
+        LOG(_lv, std::string(_msg));     \
         break;\
     }\
-    if (lv == LogLevel::FATAL) {\
+    switch ((behavior).actionType) {\
+    case USER_ACTION:\
+        {\
+            action;\
+        }\
+        break;\
+    case RETURN_ZERO:\
+        return 0;\
+    case RETURN_MINUS_ONE:\
+        return -1;\
+    case NORMAL_EXIT:\
+        exit(0);\
+    case EXIT_MINUS_ONE:\
         exit(-1);\
+    default:\
+        break;\
     }\
 }
 
