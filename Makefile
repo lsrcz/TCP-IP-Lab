@@ -1,7 +1,5 @@
 SRCDIR = src
 
-CXXFLAGS += -Wall -Werror -std=c++11
-
 BASEBUILDDIR = ./build
 
 ifeq ($(DEBUG), TRUE)
