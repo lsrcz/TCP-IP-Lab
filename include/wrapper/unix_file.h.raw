@@ -5,7 +5,7 @@
 @include <sys/stat.h>
 @include <dirent.h>
 
-@system
+@type system
 @name open
 @arg path oflag
 @vaarg 1
@@ -15,7 +15,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name openat
 @arg fd path oflag
 @vaarg 1
@@ -25,7 +25,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name creat
 @arg path mode
 @body
@@ -34,7 +34,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name close
 @arg fd
 @body
@@ -42,7 +42,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name lseek
 @arg fd offset whence
 @body
@@ -51,7 +51,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name read
 @arg fd buf nbytes
 @body
@@ -60,7 +60,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name write 
 @arg fd buf nbytes
 @body
@@ -69,7 +69,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name pread
 @arg fd buf nbytes offset
 @body
@@ -78,7 +78,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name pwrite 
 @arg fd buf nbytes offset
 @body
@@ -87,7 +87,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name dup
 @arg fd
 @body
@@ -96,7 +96,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name dup2
 @arg fd fd2
 @body
@@ -105,7 +105,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name fsync
 @arg fd
 @body
@@ -113,7 +113,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name fdatasync
 @arg fd
 @body
@@ -121,7 +121,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name fcntl
 @arg fd cmd
 @vaarg 1
@@ -131,7 +131,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name ioctl
 @arg fd request
 @vaarg 3
@@ -141,7 +141,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name stat
 @arg pathname buf
 @body
@@ -149,7 +149,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name fstat
 @arg fd buf
 @body
@@ -157,7 +157,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name lstat
 @arg pathname buf
 @body
@@ -165,7 +165,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name fstatat
 @arg fd pathname buf flag
 @body
@@ -173,7 +173,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name access
 @arg pathname mode
 @body
@@ -181,7 +181,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name faccessat
 @arg fd pathname mode flag
 @body
@@ -189,7 +189,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name chmod
 @arg pathname mode
 @body
@@ -197,7 +197,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name fchmod
 @arg fd mode
 @body
@@ -205,7 +205,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name fchmodat
 @arg fd pathname mode flag
 @body
@@ -213,7 +213,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name chown
 @arg pathname owner group
 @body
@@ -221,7 +221,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name fchown
 @arg fd owner group
 @body
@@ -229,7 +229,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name fchownat
 @arg fd pathname owner group flag
 @body
@@ -237,7 +237,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name lchown
 @arg pathname owner group
 @body
@@ -245,7 +245,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name truncate
 @arg pathname length
 @body
@@ -253,7 +253,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name ftruncate
 @arg fd length
 @body
@@ -261,7 +261,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name link
 @arg existingpath newpath
 @body
@@ -269,7 +269,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name linkat
 @arg efd existingpath nfd newpath flag
 @body
@@ -277,7 +277,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name unlink
 @arg pathname
 @body
@@ -285,7 +285,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name unlinkat
 @arg fd pathname flag
 @body
@@ -293,7 +293,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name remove
 @arg pathname
 @body
@@ -301,7 +301,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name rename
 @arg oldname newname
 @body
@@ -309,7 +309,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name renameat
 @arg oldfd oldname newfd newname
 @body
@@ -317,7 +317,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name symlink
 @arg actualpath sympath
 @body
@@ -325,7 +325,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name symlinkat
 @arg actualpath fd sympath
 @body
@@ -333,7 +333,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name readlink 
 @arg pathname buf bufsize
 @body
@@ -342,7 +342,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name readlinkat 
 @arg fd pathname buf bufsize
 @body
@@ -351,7 +351,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name futimens
 @arg fd times
 @body
@@ -359,7 +359,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name utimensat
 @arg fd path times flag
 @body
@@ -367,7 +367,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name utimes
 @arg pathname times
 @body
@@ -375,7 +375,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name mkdir
 @arg pathname mode
 @body
@@ -383,7 +383,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name mkdirat
 @arg fd pathname mode
 @body
@@ -391,7 +391,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name rmdir
 @arg pathname
 @body
@@ -399,7 +399,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name opendir
 @arg pathname
 @body
@@ -408,7 +408,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name fdopendir
 @arg fd
 @body
@@ -417,7 +417,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name readdir
 @arg dp
 @body
@@ -426,7 +426,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name closedir
 @arg dp
 @body
@@ -434,7 +434,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name chdir
 @arg pathname
 @body
@@ -442,7 +442,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name fchdir
 @arg fd
 @body
@@ -450,7 +450,7 @@
 @endbody
 @end
 
-@system
+@type system
 @name getcwd
 @arg buf size
 @body

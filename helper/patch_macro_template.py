@@ -164,8 +164,8 @@ def read_func(text, pos):
     f = Func()
     while pos < len(text) and not text[pos].strip().startswith('@end'):
         l = text[pos]
-        if l.startswith('@system'):
-            f.t = 'system'
+        if l.startswith('@type'):
+            f.t = l[5:].strip()
         if l.startswith('@name'):
             f.rawname = l[5:].strip()
             f.name = f.rawname.capitalize()
@@ -192,7 +192,7 @@ def read_next(text, pos):
     if l.strip().startswith('@include'):
         includename = l[8:].strip()
         return (pos + 1, 'include', includename)
-    if l.strip().startswith('@system') or l.strip().startswith('@user') or l.strip().startwith('@pcap'):
+    if l.strip().startswith('@type'):
         pos, f = read_func(text, pos)
         return (pos + 1, 'func', f)
 
