@@ -3,6 +3,7 @@
 @include <unistd.h>
 @include <sys/ioctl.h>
 @include <sys/stat.h>
+@include <dirent.h>
 
 @system
 @name open
@@ -147,3 +148,313 @@
 @noreteq -1
 @endbody
 @end
+
+@system
+@name fstat
+@arg fd buf
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name lstat
+@arg pathname buf
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name fstatat
+@arg fd pathname buf flag
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name access
+@arg pathname mode
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name faccessat
+@arg fd pathname mode flag
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name chmod
+@arg pathname mode
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name fchmod
+@arg fd mode
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name fchmodat
+@arg fd pathname mode flag
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name chown
+@arg pathname owner group
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name fchown
+@arg fd owner group
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name fchownat
+@arg fd pathname owner group flag
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name lchown
+@arg pathname owner group
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name truncate
+@arg pathname length
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name ftruncate
+@arg fd length
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name link
+@arg existingpath newpath
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name linkat
+@arg efd existingpath nfd newpath flag
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name unlink
+@arg pathname
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name unlinkat
+@arg fd pathname flag
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name remove
+@arg pathname
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name rename
+@arg oldname newname
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name renameat
+@arg oldfd oldname newfd newname
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name symlink
+@arg actualpath sympath
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name symlinkat
+@arg actualpath fd sympath
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name readlink 
+@arg pathname buf bufsize
+@body
+@decl ssize_t _byte
+@reteq -1 _byte
+@endbody
+@end
+
+@system
+@name readlinkat 
+@arg fd pathname buf bufsize
+@body
+@decl ssize_t _byte
+@reteq -1 _byte
+@endbody
+@end
+
+@system
+@name futimens
+@arg fd times
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name utimensat
+@arg fd path times flag
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name utimes
+@arg pathname times
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name mkdir
+@arg pathname mode
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name mkdirat
+@arg fd pathname mode
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name rmdir
+@arg pathname
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name opendir
+@arg pathname
+@body
+@decl DIR *_dir
+@reteq NULL _dir
+@endbody
+@end
+
+@system
+@name fdopendir
+@arg fd
+@body
+@decl DIR *_dir
+@reteq NULL _dir
+@endbody
+@end
+
+@system
+@name readdir
+@arg dp
+@body
+@decl struct dirent *_dirent
+@reteq NULL _dirent
+@endbody
+@end
+
+@system
+@name closedir
+@arg dp
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name chdir
+@arg pathname
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name fchdir
+@arg fd
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name getcwd
+@arg buf size
+@body
+@noreteq NULL
+@endbody
+@end
+
