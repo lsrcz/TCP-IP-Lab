@@ -40,6 +40,26 @@ struct ErrorBehavior {
 
 };
 
+template <typename T>
+bool isErrorBehavior(T t) {
+    return false;
+}
+
+template <>
+bool isErrorBehavior(ErrorBehavior p) {
+    return true;
+}
+
+template <typename T>
+ErrorBehavior behaviorFrom(T t) {
+    return ErrorBehavior("");
+}
+
+template <>
+ErrorBehavior behaviorFrom(ErrorBehavior eb) {
+    return eb;
+}
+
 #define ERROR_WITH_BEHAVIOR(behavior, action) {        \
     LogLevel _lv = LogLevel::ERROR;\
     if ((behavior).fatalFlag) {    \

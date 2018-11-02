@@ -1,0 +1,111 @@
+@filename unix_file.h
+@include <fcntl.h>
+@include <unistd.h>
+
+@system
+@name open
+@arg path oflag
+@vaarg 1
+@body
+@decl int _fd;
+if ((_fd = @call) < 0) {
+@err
+}
+@ret _fd;
+@endbody
+@end
+
+@system
+@name openat
+@arg fd path oflag
+@vaarg 1
+@body
+@decl int _fd;
+if ((_fd = @call) < 0) {
+@err
+}
+@ret _fd;
+@endbody
+@end
+
+@system
+@name creat
+@arg path mode
+@body
+@decl int _fd;
+if ((_fd = @call) < 0) {
+@err
+}
+@ret _fd;
+@endbody
+@end
+
+@system
+@name close
+@arg fd
+@body
+if (@call == -1) {
+@err
+}
+@endbody
+@end
+
+@system
+@name lseek
+@arg fd offset whence
+@body
+@decl off_t _off;
+if ((_off = @call) < 0) {
+@err
+}
+@ret _off;
+@endbody
+@end
+
+@system
+@name read
+@arg fd buf nbytes
+@body
+@decl ssize_t _size;
+if ((_size = @call) < 0) {
+@err
+}
+@ret _size;
+@endbody
+@end
+
+@system
+@name write 
+@arg fd buf nbytes
+@body
+@decl ssize_t _size;
+if ((_size = @call) < 0) {
+@err
+}
+@ret _size;
+@endbody
+@end
+
+@system
+@name pread
+@arg fd buf nbytes offset
+@body
+@decl ssize_t _size;
+if ((_size = @call) < 0) {
+@err
+}
+@ret _size;
+@endbody
+@end
+
+@system
+@name write 
+@arg fd buf nbytes
+@body
+@decl ssize_t _size;
+if ((_size = @call) < 0) {
+@err
+}
+@ret _size;
+@endbody
+@end
