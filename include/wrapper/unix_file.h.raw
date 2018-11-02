@@ -1,17 +1,16 @@
 @filename unix_file.h
 @include <fcntl.h>
 @include <unistd.h>
+@include <sys/ioctl.h>
+@include <sys/stat.h>
 
 @system
 @name open
 @arg path oflag
 @vaarg 1
 @body
-@decl int _fd;
-if ((_fd = @call) < 0) {
-@err
-}
-@ret _fd;
+@decl int _fd
+@reteq -1 _fd
 @endbody
 @end
 
@@ -20,11 +19,8 @@ if ((_fd = @call) < 0) {
 @arg fd path oflag
 @vaarg 1
 @body
-@decl int _fd;
-if ((_fd = @call) < 0) {
-@err
-}
-@ret _fd;
+@decl int _fd
+@reteq -1 _fd
 @endbody
 @end
 
@@ -32,11 +28,8 @@ if ((_fd = @call) < 0) {
 @name creat
 @arg path mode
 @body
-@decl int _fd;
-if ((_fd = @call) < 0) {
-@err
-}
-@ret _fd;
+@decl int _fd
+@reteq -1 _fd
 @endbody
 @end
 
@@ -44,9 +37,7 @@ if ((_fd = @call) < 0) {
 @name close
 @arg fd
 @body
-if (@call == -1) {
-@err
-}
+@noreteq -1
 @endbody
 @end
 
@@ -54,11 +45,8 @@ if (@call == -1) {
 @name lseek
 @arg fd offset whence
 @body
-@decl off_t _off;
-if ((_off = @call) < 0) {
-@err
-}
-@ret _off;
+@decl off_t _off
+@reteq -1 _off
 @endbody
 @end
 
@@ -66,11 +54,8 @@ if ((_off = @call) < 0) {
 @name read
 @arg fd buf nbytes
 @body
-@decl ssize_t _size;
-if ((_size = @call) < 0) {
-@err
-}
-@ret _size;
+@decl ssize_t _size
+@reteq -1 _size
 @endbody
 @end
 
@@ -78,11 +63,8 @@ if ((_size = @call) < 0) {
 @name write 
 @arg fd buf nbytes
 @body
-@decl ssize_t _size;
-if ((_size = @call) < 0) {
-@err
-}
-@ret _size;
+@decl ssize_t _size
+@reteq -1 _size
 @endbody
 @end
 
@@ -90,22 +72,78 @@ if ((_size = @call) < 0) {
 @name pread
 @arg fd buf nbytes offset
 @body
-@decl ssize_t _size;
-if ((_size = @call) < 0) {
-@err
-}
-@ret _size;
+@decl ssize_t _size
+@reteq -1 _size
 @endbody
 @end
 
 @system
-@name write 
-@arg fd buf nbytes
+@name pwrite 
+@arg fd buf nbytes offset
 @body
-@decl ssize_t _size;
-if ((_size = @call) < 0) {
-@err
-}
-@ret _size;
+@decl ssize_t _size
+@reteq -1 _size
+@endbody
+@end
+
+@system
+@name dup
+@arg fd
+@body
+@decl int _fd
+@reteq -1 _fd
+@endbody
+@end
+
+@system
+@name dup2
+@arg fd fd2
+@body
+@decl int _fd
+@reteq -1 _fd
+@endbody
+@end
+
+@system
+@name fsync
+@arg fd
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name fdatasync
+@arg fd
+@body
+@noreteq -1
+@endbody
+@end
+
+@system
+@name fcntl
+@arg fd cmd
+@vaarg 1
+@body
+@decl int _ret
+@reteq -1 _ret
+@endbody
+@end
+
+@system
+@name ioctl
+@arg fd request
+@vaarg 3
+@body
+@decl int _ret
+@reteq -1 _ret
+@endbody
+@end
+
+@system
+@name stat
+@arg pathname buf
+@body
+@noreteq -1
 @endbody
 @end

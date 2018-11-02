@@ -38,7 +38,7 @@ class Header:
 
         for i in self.include:
             ret += '#include ' + i + '\n'
-        ret += '#include <utils/errorutils.h>'
+        ret += '#include <utils/errorutils.h>\n'
         ret += '\n'
 
         for f in self.funcs:
@@ -79,10 +79,10 @@ class Func:
             for l in self.body:
                 stripl = l.strip()
                 if stripl.startswith('@decl'):
-                    decllines.append(stripl[5:].strip())
+                    decllines.append(stripl[5:].strip() + ';')
                     continue
-                if stripl.startswith('@ret'):
-                    retlines.append(stripl[4:].strip())
+                if stripl.startswith('@ret') and not stripl.startswith('@reteq'):
+                    retlines.append(stripl[4:].strip() + ';')
                     continue
                 if stripl.startswith('@err'):
                     workinglines.append('ERROR_WITH_BEHAVIOR(_eb' + str(i) + ', _action);')
@@ -95,6 +95,33 @@ class Func:
                     callingstr += ')'
                     callingstr += stripl[pos + 5:]
                     workinglines.append(callingstr)
+                    continue
+                if stripl.startswith('@noreteq'):
+                    callingstr = 'if (' + self.rawname + '(' + ', '.join(self.arg)
+                    for j in range(i):
+                        callingstr += ', _a' + str(j)
+                    callingstr += ') == '
+                    eqarg = stripl[8:].strip()
+                    callingstr += eqarg
+                    callingstr += ') {'
+                    workinglines.append(callingstr)
+                    workinglines.append('ERROR_WITH_BEHAVIOR(_eb' + str(i) + ', _action);')
+                    workinglines.append('}')
+                    continue
+                if stripl.startswith('@reteq'):
+                    params = list(filter(lambda x: x != '', stripl[6:].split(' ')))
+                    eqarg = params[0]
+                    retarg = params[1]
+                    callingstr = 'if ((' + retarg + ' = ' + self.rawname + '(' + ', '.join(self.arg)
+                    for j in range(i):
+                        callingstr += ', _a' + str(j)
+                    callingstr += ')) == '
+                    callingstr += eqarg
+                    callingstr += ') {'
+                    workinglines.append(callingstr)
+                    workinglines.append('ERROR_WITH_BEHAVIOR(_eb' + str(i) + ', _action);')
+                    workinglines.append('}')
+                    retlines.append(retarg + ';')
                     continue
                 workinglines.append(stripl)
             if i != self.max_vaarg:
