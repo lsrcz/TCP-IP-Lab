@@ -2,6 +2,7 @@
 
 int a() {
     LOG(LogLevel::INFO, "Message from a.");
+    return 1;
 }
 
 int main() {
