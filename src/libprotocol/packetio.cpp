@@ -19,20 +19,21 @@
  */
 int sendFrame(const void* buf, int len, 
               int ethtype, const void* destmac, int id) {
-    if (!ETHER_IS_VALID_LEN(len + ETHER_HDR_LEN)) {
+    if (len + ETHER_HDR_LEN > ETH_FRAME_LEN) {
         LOG(ERROR, "Invalid packet length");
         return -1;
     }
     uint8_t framebuf[ETHER_MAX_LEN];
+    memset(framebuf, 0, ETHER_MAX_LEN);
     struct ether_header eh;
     memcpy(eh.ether_dhost, destmac, 6);
-    if (getDeviceMac(id, eh.ether_shost) < 0) {
+    if (getDeviceMAC(id, eh.ether_shost) < 0) {
         return -1;
     }
     eh.ether_type = htonl16((uint16_t)ethtype);
     memcpy(framebuf, &eh, ETHER_HDR_LEN);
     memcpy(framebuf + ETHER_HDR_LEN, buf, len);
-    return sendPacketOnDevice(id, framebuf, len + ETHER_HDR_LEN);
+    return sendPacketOnDevice(id, framebuf, std::max(ETH_ZLEN, len + ETHER_HDR_LEN));
 }
 
 /** 
