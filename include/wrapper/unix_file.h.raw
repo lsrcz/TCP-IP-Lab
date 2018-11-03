@@ -65,7 +65,7 @@
 @arg fd buf nbytes
 @body
 @decl ssize_t _size
-@reteq -1 _size
+@retneq nbytes _size
 @endbody
 @end
 
@@ -83,7 +83,7 @@
 @arg fd buf nbytes offset
 @body
 @decl ssize_t _size
-@reteq -1 _size
+@reteq nbytes _size
 @endbody
 @end
 
@@ -457,4 +457,40 @@
 @noreteq NULL
 @endbody
 @end
+
+@type system
+@name fopen
+@arg pathname type
+@body
+@decl _fp
+@reteq NULL _fp
+@endbody
+@end
+
+@type system
+@name freopen
+@arg pathname type fp
+@body
+@decl _fp
+@reteq NULL _fp
+@endbody
+@end
+
+@type system
+@name fdopen
+@arg fd type
+@body
+@decl _fp
+@reteq NULL _fp
+@endbody
+@end
+
+@type system
+@name fclose
+@arg fp
+@body
+@noreteq EOF
+@endbody
+@end
+
 

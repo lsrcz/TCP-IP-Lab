@@ -61,7 +61,6 @@ class Func:
         return formatmacro(['#define ' + self.name + '(' + ', '.join(self.arg) + ', ...) ({',
                             'ErrorBehavior _ebo = ErrorBehavior("");',
                             '_ebo.from = SOURCE' + '_' + self.t.upper() + ';',
-                            '_ebo.sys_msg = "' + self.name + '";',
                             '_' + self.name + '0(' + ', '.join(self.arg) + ', ##__VA_ARGS__, _ebo' + ', 0' * (self.max_vaarg + 2) + ');',
                             '})'])
     def after_macro(self):
@@ -72,10 +71,23 @@ class Func:
             for j in range(i):
                 fstline += ', _a' + str(j)
             fstline += ', _behavior, _action, ...) ({'
-            dispatchline = 'if(isErrorBehavior(_behavior)) {'
-            workinglines = ['ErrorBehavior _eb' + str(i) + ' = behaviorFrom(_behavior);']
+            dispatchlines = ['decltype(({_behavior;})) *_decleb;',
+                             'if(std::is_same<ErrorBehavior, std::remove_pointer<decltype(_decleb)>::type>()) {']
+            workinglines = ['ErrorBehavior _eb' + str(i) + ' = behaviorFrom(({_behavior;}));',
+                            '_eb' + str(i) + '.sys_msg = "' + self.rawname + '";']
             decllines = []
             retlines = []
+            def geterrorexpr(l, i):
+                ret = []
+                if self.t == 'pcap_buffer':
+                    errbuf = l[4:].strip()
+                    ret.append('_eb' + str(i) + '.buf = ' + errbuf + ';')
+                #ret.append('if (isErrorBehavior(_action)) {')
+                #ret.append('ERROR_WITH_BEHAVIOR(_eb' + str(i) + ', exit(0));')
+                #ret.append('} else {')
+                ret.append('ERROR_WITH_BEHAVIOR(_eb' + str(i) + ', _action);')
+                #ret.append('}')
+                return ret
             for l in self.body:
                 stripl = l.strip()
                 if stripl.startswith('@decl'):
@@ -85,7 +97,7 @@ class Func:
                     retlines.append(stripl[4:].strip() + ';')
                     continue
                 if stripl.startswith('@err'):
-                    workinglines.append('ERROR_WITH_BEHAVIOR(_eb' + str(i) + ', _action);')
+                    workinglines.extend(geterrorexpr(l, i))
                     continue
                 if stripl.find('@call') != -1:
                     pos = stripl.find('@call')
@@ -96,6 +108,10 @@ class Func:
                     callingstr += stripl[pos + 5:]
                     workinglines.append(callingstr)
                     continue
+                if stripl.startswith('@pcap'):
+                    ptr = stripl[5:].strip();
+                    workinglines.append('_eb' + str(i) + '.pcap = ' + ptr + ';')
+                    continue
                 if stripl.startswith('@noreteq'):
                     callingstr = 'if (' + self.rawname + '(' + ', '.join(self.arg)
                     for j in range(i):
@@ -105,7 +121,19 @@ class Func:
                     callingstr += eqarg
                     callingstr += ') {'
                     workinglines.append(callingstr)
-                    workinglines.append('ERROR_WITH_BEHAVIOR(_eb' + str(i) + ', _action);')
+                    workinglines.extend(geterrorexpr(l, i))
+                    workinglines.append('}')
+                    continue
+                if stripl.startswith('@noretneq'):
+                    callingstr = 'if (' + self.rawname + '(' + ', '.join(self.arg)
+                    for j in range(i):
+                        callingstr += ', _a' + str(j)
+                    callingstr += ') != '
+                    eqarg = stripl[9:].strip()
+                    callingstr += eqarg
+                    callingstr += ') {'
+                    workinglines.append(callingstr)
+                    workinglines.extend(geterrorexpr(l, i))
                     workinglines.append('}')
                     continue
                 if stripl.startswith('@reteq'):
@@ -119,7 +147,22 @@ class Func:
                     callingstr += eqarg
                     callingstr += ') {'
                     workinglines.append(callingstr)
-                    workinglines.append('ERROR_WITH_BEHAVIOR(_eb' + str(i) + ', _action);')
+                    workinglines.extend(geterrorexpr(l, i))
+                    workinglines.append('}')
+                    retlines.append(retarg + ';')
+                    continue
+                if stripl.startswith('@retneq'):
+                    params = list(filter(lambda x: x != '', stripl[6:].split(' ')))
+                    eqarg = params[0]
+                    retarg = params[1]
+                    callingstr = 'if ((' + retarg + ' = ' + self.rawname + '(' + ', '.join(self.arg)
+                    for j in range(i):
+                        callingstr += ', _a' + str(j)
+                    callingstr += ')) != '
+                    callingstr += eqarg
+                    callingstr += ') {'
+                    workinglines.append(callingstr)
+                    workinglines.extend(geterrorexpr(l, i))
                     workinglines.append('}')
                     retlines.append(retarg + ';')
                     continue
@@ -134,11 +177,12 @@ class Func:
             else:
                 dispatchfaillines = ['} else {',
                                      'printf("Too many args for ' + self.name + '\\n");',
+                                     'exit(-1);',
                                      '}']
             closeline = '})'
             lst.append(fstline)
             lst.extend(decllines)
-            lst.append(dispatchline)
+            lst.extend(dispatchlines)
             lst.extend(workinglines)
             lst.extend(dispatchfaillines)
             lst.extend(retlines)
@@ -198,8 +242,8 @@ def read_next(text, pos):
 
 
 def main():
-#    name = input()
-    name = './include/wrapper/unix_file.h.raw'
+    name = input()
+    #name = './include/wrapper/pcap.h.raw'
     h = Header()
     h.read_file(name)
     print(h)

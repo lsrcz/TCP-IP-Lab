@@ -1,0 +1,10 @@
+@filename pthread.h
+@include <pthread.h>
+
+@type system
+@name pthread_cancel
+@arg thread
+@body
+@noretneq 0
+@endbody
+@end

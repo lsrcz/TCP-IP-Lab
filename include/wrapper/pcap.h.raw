@@ -1,0 +1,64 @@
+@filename pcap.h
+@include <pcap/pcap.h>
+
+@type pcap_buffer
+@name pcap_create
+@arg source errbuf
+@body
+@decl pcap_t *_pcap
+if ((_pcap = @call) == NULL) {
+@err errbuf
+}
+@ret _pcap
+@endbody
+@end
+
+@type pcap
+@name pcap_activate
+@arg p
+@body
+if (@call != 0) {
+@pcap p
+@err
+}
+@endbody
+@end
+
+@type pcap
+@name pcap_list_datalinks
+@arg p dlt_buf
+@body
+@decl int _num
+if ((_num = @call) == -1) {
+@pcap p
+@err
+}
+@ret _num
+@endbody
+@end
+
+@type pcap
+@name pcap_inject
+@arg p buf size
+@body
+if (@call != size) {
+@pcap p
+@err
+}
+@endbody
+@end
+
+@type pcap
+@name pcap_loop
+@arg p cnt callback user
+@body
+@decl _ret
+_ret = @call;
+if (_ret == -1) {
+@err
+} else if (_ret == -2) {
+LOG(WARNING, "pcap_loop interrupted");
+}
+@endbody
+@end
+
