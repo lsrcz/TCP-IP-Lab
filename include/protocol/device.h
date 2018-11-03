@@ -81,12 +81,11 @@ class device_list_t {
     mutable std::shared_mutex mu;
     auto getDeviceIter(std::string name);
     auto getDeviceIter(int id);
-    // no lock provided, should only be used is an locked environment
-    bool haveListeningDevice();
  public:
     int addDevice(const std::string &name);
     int findDevice(const std::string &name);
     int getFirstDevice();
+    std::vector<int> getAllDevice();
     int removeDevice(const std::string &name);
     int removeDevice(int id);
     void removeAllDevice();

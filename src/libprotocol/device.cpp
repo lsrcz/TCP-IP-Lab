@@ -214,6 +214,14 @@ int device_list_t::getFirstDevice() {
         return -1;
     return devices.front().id;
 }
+std::vector<int> device_list_t::getAllDevice() {
+    std::shared_lock<std::shared_mutex> lock(mu);
+    std::vector<int> v;
+    for (const auto &d : devices) {
+        v.push_back(d.id);
+    }
+    return v;
+}
 int device_list_t::removeDevice(const std::string &name) {
     auto iter = getDeviceIter(name);
     if (iter == devices.end())
