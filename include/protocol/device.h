@@ -10,35 +10,92 @@
 #include <cstddef>
 #include <string>
 #include <list>
+#include <vector>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <net/if.h>
 #include <pcap.h>
 #include <cstring>
+#include <memory>
+#include <functional>
+#include <thread>
+#include <set>
+#include <utils/errorutils.h>
+#include <wrapper/pcap.h>
+#include <wrapper/unix_file.h>
+#include <wrapper/pthread.h>
+#include <mutex>
+#include <shared_mutex>
+
 
 struct device_t {
-    static int avaliable_id;
-    int is_properly_inited = 0;
-    std::string name;
+    static std::set<int> avaliable_id;
     int id;
-    pcap_t* pcap;
+    bool ownid;
+    std::string name;
+    bool is_inited = false;
+    
+    std::unique_ptr<pcap_t, std::function<void(pcap_t*)>> pcap;
     uint8_t mac[6];
-    pthread_t listening_thread;
-    int holding_thread = 0;
+    std::thread listening_thread;
+
     inline
-    device_t() : name(""), id(-1), pcap(NULL) {}
-    device_t(std::string name, pcap_t* pcap);
+    device_t(std::string name) : id(*avaliable_id.begin()), ownid(true), name(name) {
+        avaliable_id.erase(avaliable_id.begin());
+        if (avaliable_id.empty())
+            avaliable_id.insert(id + 1);
+    }
+    inline
+    ~device_t() {
+        if (ownid)
+            avaliable_id.insert(id);
+        stopListening();
+    }
+    void startListening();
+    void stopListening();
+    inline
+    bool isListening() const {
+        return listening_thread.joinable();
+    }
+    
+    bool init();
     device_t(device_t&& rhs);
     device_t& operator=(device_t&& rhs);
     inline
     bool operator==(const device_t& rhs) {
         return id == rhs.id;
     }
-    ~device_t(); 
+    int sendPacket(const void *buf, int size) {
+        std::string str = std::string("Send packet on " + name + " failed");
+        char ebbuf[200];
+        strcpy(ebbuf, str.c_str());
+        ErrorBehavior eb(ebbuf, false, true);
+        Pcap_inject(pcap.get(), buf, size, eb, return -1);
+        return 0;
+    }
 };
 
-extern std::list<device_t> devices;
+class device_list_t {
+    std::list<device_t> devices;
+    mutable std::shared_mutex mu;
+    auto getDeviceIter(std::string name);
+    auto getDeviceIter(int id);
+    // no lock provided, should only be used is an locked environment
+    bool haveListeningDevice();
+ public:
+    int addDevice(const std::string &name);
+    int findDevice(const std::string &name);
+    int getFirstDevice();
+    int removeDevice(const std::string &name);
+    int removeDevice(int id);
+    void removeAllDevice();
+    int sendPacketOnDevice(int id, const void *buf, int size);
+    int getDeviceMAC(int id, void *buf);
+};
+
+
+std::vector<std::string> listAvailableDevices();
 
 /**
  * Add a device to the library for sending/receiving packets. 
@@ -67,5 +124,5 @@ void removeAllDevice();
 
 int sendPacketOnDevice(int device_descriptor, const void *buf, int size);
 
-int getDeviceMac(int device_descriptor, void *buf); 
+int getDeviceMac(int device_descriptor, void *buf);
 #endif // DEVICE_H

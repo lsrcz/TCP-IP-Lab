@@ -6,6 +6,7 @@
 
 
 int testManageDevice() {
+    printf("-------- TEST MANAGE DEVICE --------\n\n");
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_if_t *alldevsp;
     pcap_findalldevs(&alldevsp , errbuf);
@@ -29,7 +30,7 @@ int testManageDevice() {
     int id = 0;
     for (const std::string&devicename : succ) {
         int fid = findDevice(devicename.c_str());
-        if (fid != id++) {
+        if (fid == -1) {
             printf("Error id %d for %s\n", fid, devicename.c_str());
             return -1;
         } else {
@@ -54,14 +55,14 @@ int testManageDevice() {
                 return -1;
             }
             int t = addDevice(succ[1].c_str());
-            if (t != 0) {
+            if (t != -1) {
                 printf("Success to add the device %s, id is %d\n", succ[1].c_str(), t);
             } else {
                 printf("Failed to add the device %s, return value is %d\n", succ[1].c_str(), t);
                 return -1;
             }
             t = addDevice(succ[0].c_str());
-            if (t != 0) {
+            if (t != -1) {
                 printf("Success to add the device %s, id is %d\n", succ[0].c_str(), t);
             } else {
                 printf("Failed to add the device %s, return value is %d\n", succ[0].c_str(), t);
@@ -92,6 +93,7 @@ int testManageDevice() {
 }
 
 int testMac() {
+    printf("-------- TEST MAC --------\n\n");
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_if_t *alldevsp;
     pcap_findalldevs(&alldevsp , errbuf);
@@ -130,10 +132,23 @@ int testMac() {
     return (oknum > 0);
 }
 
+void testRAII() {
+    char errbuf[PCAP_ERRBUF_SIZE];
+    pcap_if_t *alldevsp;
+    pcap_findalldevs(&alldevsp , errbuf);
+    pcap_if_t *first = alldevsp;
+    while (first != NULL) {
+        int t = addDevice(first->name);
+        first = first->next;
+    }
+    pcap_freealldevs(alldevsp);
+}
+
 int main() {
     if (testManageDevice() < 0)
         return -1;
     if (testMac() < 0)
         return -1;
+    testRAII();
     return 0;
 }
