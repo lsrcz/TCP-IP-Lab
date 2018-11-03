@@ -115,7 +115,7 @@ int testMac() {
     unsigned char *buf = (unsigned char*)malloc(6);
     int oknum = 0;
     for (auto& p : succ) {
-        if (getDeviceMac(p.first, buf) < 0) {
+        if (getDeviceMAC(p.first, buf) < 0) {
             printf("No MAC address available for %s\n", p.second.c_str());
         } else {
             printf("MAC address of %s: ", p.second.c_str());
