@@ -9,53 +9,94 @@
 enum ErrorSource {
     SOURCE_SYSTEM,
     SOURCE_PCAP,
-    SOURCE_USER
-};
-
-enum ActionType {
-    NOACTION,
-    USER_ACTION,
-    RETURN_MINUS_ONE,
-    RETURN_ZERO,
-    NORMAL_EXIT,
-    EXIT_MINUS_ONE
+    SOURCE_USER,
+    SOURCE_PCAP_BUFFER
 };
 
 struct ErrorBehavior {
     const char *msg;
-    const char *sys_msg;
     bool fatalFlag;
+    bool haveAction;
     ErrorSource from;
-    ActionType actionType;
+    const char *sys_msg;
     pcap_t *pcap;
+    const char *buf;
 
     inline ErrorBehavior(const char *msg,
                          bool fatalFlag = false,
-                         ActionType actionType = NOACTION,
+                         bool haveAction = false,
                          ErrorSource from = SOURCE_USER,
                          const char *sys_msg = "",
-                         pcap_t *pcap = NULL)
-        : msg(msg), from(from), fatalFlag(fatalFlag),
-        actionType(actionType), sys_msg(sys_msg), pcap(pcap) {}
-
+                         pcap_t *pcap = NULL,
+                         const char *buf = NULL)
+        : msg(msg), fatalFlag(fatalFlag), haveAction(haveAction), from(from),
+        sys_msg(sys_msg), pcap(pcap), buf(buf) {}
+    inline ErrorBehavior& setFlag(bool fatalFlag, bool haveAction, ErrorSource from) {
+        this->fatalFlag = fatalFlag;
+        this->haveAction = haveAction;
+        this->from = from;
+        return *this;
+    }
+    inline ErrorBehavior& setSysFatal() {
+        this->fatalFlag = true;
+        this->from = SOURCE_SYSTEM;
+        return *this;
+    }
+    inline ErrorBehavior& setSysError() {
+        this->fatalFlag = false;
+        this->from = SOURCE_SYSTEM;
+        return *this;
+    }
+    inline ErrorBehavior& setPcapFatal() {
+        this->fatalFlag = true;
+        this->from = SOURCE_PCAP;
+        return *this;
+    }
+    inline ErrorBehavior& setPcapError() {
+        this->fatalFlag = false;
+        this->from = SOURCE_PCAP;
+        return *this;
+    }
+    inline ErrorBehavior& setUserError() {
+        this->fatalFlag = false;
+        this->from = SOURCE_USER;
+        return *this;
+    }
+    inline ErrorBehavior& setUserFatal() {
+        this->fatalFlag = true;
+        this->from = SOURCE_USER;
+        return *this;
+    }
+    inline ErrorBehavior& setHaveAction() {
+        this->haveAction = true;
+        return *this;
+    }
+    inline ErrorBehavior& setNoAction() {
+        this->haveAction = false;
+        return *this;
+    }
 };
 
 template <typename T>
+inline
 bool isErrorBehavior(T t) {
     return false;
 }
 
 template <>
+inline
 bool isErrorBehavior(ErrorBehavior p) {
     return true;
 }
 
 template <typename T>
+inline
 ErrorBehavior behaviorFrom(T t) {
     return ErrorBehavior("");
 }
 
 template <>
+inline
 ErrorBehavior behaviorFrom(ErrorBehavior eb) {
     return eb;
 }
@@ -77,23 +118,12 @@ ErrorBehavior behaviorFrom(ErrorBehavior eb) {
     case SOURCE_USER:\
         LOG(_lv, std::string(_msg));     \
         break;\
+    case SOURCE_PCAP_BUFFER:\
+        LOG(_lv, std::string(_msg) + " \033[36m[" + _sys_msg + ": " + (behavior).buf + "]\033[0m");\
+        break;\
     }\
-    switch ((behavior).actionType) {\
-    case USER_ACTION:\
-        {\
-            action;\
-        }\
-        break;\
-    case RETURN_ZERO:\
-        return 0;\
-    case RETURN_MINUS_ONE:\
-        return -1;\
-    case NORMAL_EXIT:\
-        exit(0);\
-    case EXIT_MINUS_ONE:\
-        exit(-1);\
-    default:\
-        break;\
+    if ((behavior).haveAction) {\
+        action;\
     }\
 }
 
