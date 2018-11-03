@@ -6,8 +6,39 @@
 #include <net/ethernet.h>
 #include <cstdint>
 #include <cstring>
+#include <map>
+#include <arpa/inet.h>
 
-bool IPInitFlag = false;
+std::map<int, in_addr> ip_map;
+
+int registerDeviceIP(int device, const char* ip) {
+    in_addr iip;
+    if (inet_aton(ip, &iip) == 0)
+        return -1;
+    ip_map[device] = iip;
+    return 0;
+}
+
+void registerDeviceIP(int device, in_addr ip) {
+    ip_map[device] = ip;
+}
+
+void deleteDeviceIP(int device) {
+    auto iter = ip_map.find(device);
+    if (iter == ip_map.end()) {
+        return;
+    }
+    ip_map.erase(iter);
+}
+
+int getDeviceIP(int device, in_addr* ip) {
+    auto iter = ip_map.find(device);
+    if (iter == ip_map.end()) {
+        return -1;
+    }
+    *ip = iter->second;
+    return 0;
+}
 
 union checksum_helper {
     uint32_t i;
@@ -58,27 +89,4 @@ int setIPPacketReceiveCallback(int protocol, IPPacketReceiveCallback callback) {
     return 0;
 }
 
-int defaultFrameReceiveCallback(const void* buf, int len, int id) {
-    printf("Packet of length %d received on id %d\n", len, id);
-    return 0;
-}
 
-int IPInit() {
-    if (!packetioIsInit()) {
-        if (packetioInit() != 0) {
-            //logPrint(FATAL, "Unable to init IP, packetio init failed.");
-            return -1;
-        }
-    }
-    if (IPIsInit())
-        return 0;
-    if (pthread_rwlock_init(IPCallbackVectorRwlock, NULL) != 0) {
-        //logPrint(FATAL, "Unable to init IP, rwlock init failed.");
-        return -1;
-    }
-    return setFrameReceiveCallback(defaultFrameReceiveCallback);
-}
-
-bool IPIsInit() {
-    return IPInitFlag;
-}

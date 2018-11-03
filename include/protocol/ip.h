@@ -7,6 +7,10 @@
 #define IP_H
 #include <netinet/ip.h>
 
+int registerDeviceIP(int device, const char* ipstr);
+void registerDeviceIP(int device, in_addr ip);
+void deleteDeviceIP(int device);
+int getDeviceIP(int device, in_addr* ip);
 /**
  * @brief Send an IP packet to specified host. 
  *
@@ -54,7 +58,4 @@ int setIPPacketReceiveCallback(int protocol, IPPacketReceiveCallback callback);
 int setRoutingTable(const struct in_addr dest, const struct in_addr mask, 
     const void* nextHopMAC, const char *device);
 
-int IPInit();
-
-bool IPIsInit();
 #endif // IP_H
