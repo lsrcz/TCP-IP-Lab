@@ -42,8 +42,14 @@ int request_arp(in_addr ip, void* m) {
         }
     }
     for (int i = 0; i < 3; ++i) {
-        if (sendARPRequest(ip, 0) < 0)
-            continue;
+        std::vector<int> devices = getAllDevice();
+        if (devices.empty()) {
+            ErrorBehavior eb("No device avaliable", false, true);
+            ERROR_WITH_BEHAVIOR(eb, return -1);
+        }
+        for (int i: devices) {
+            sendARPRequest(ip, i);
+        }
         if (arp_cv.wait_for(arp_mu, std::chrono::seconds(1), [uip]{
                     for (auto &p : arp_cache) {
                         auto iter = p.second.find(uip);
@@ -63,6 +69,9 @@ int request_arp(in_addr ip, void* m) {
             break;
         }
     }
+    std::string msg = std::string("Unable to get the MAC address for ") + inet_ntoa(ip);
+    ErrorBehavior eb(msg.c_str(), false, true);
+    ERROR_WITH_BEHAVIOR(eb, return -1);
     return -1;
 }
 

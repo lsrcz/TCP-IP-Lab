@@ -292,6 +292,10 @@ int getFirstDevice() {
     return devices.getFirstDevice();
 }
 
+std::vector<int> getAllDevice() {
+    return devices.getAllDevice();
+}
+
 int removeDevice(const char* device) {
     LOG(INFO, std::string("Trying to remove device ") + device);
     int ret = devices.removeDevice(device);

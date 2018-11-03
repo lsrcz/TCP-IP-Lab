@@ -4,10 +4,10 @@
 int main() {
     initProtocol();
     int id = addInterfaceWithIP("ens33", "172.16.175.203");
+    int id1 = addInterfaceWithIP("lo", "127.0.0.1");
     in_addr ip;
-    inet_aton("172.16.175.1", &ip);
+    inet_aton("127.0.0.1", &ip);
     uint8_t buf[6];
-    sleep(10);
     request_arp(ip, buf);
     for (int i = 0; i < 6; ++i) {
         if (i != 0)

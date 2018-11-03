@@ -115,6 +115,8 @@ int findDevice(const char* device);
 
 int getFirstDevice();
 
+std::vector<int> getAllDevice();
+
 int removeDevice(const char* device);
 
 int removeDevice(int device_descriptor);
