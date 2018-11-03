@@ -42,8 +42,4 @@ typedef int (*frameReceiveCallback)(const void*, int, int);
  */
 int setFrameReceiveCallback(frameReceiveCallback callback);
 
-int packetioInit();
-
-bool packetioIsInit();
-
 #endif // PACKETIO_H

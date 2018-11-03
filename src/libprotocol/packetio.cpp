@@ -6,7 +6,6 @@
 #include <cstdlib>
 #include <cstdint>
 
-bool packetioInitFlag = false;
 /** 
  * @brief Encapsule some data into an Ethernet II frame and send it.
  *
@@ -20,15 +19,20 @@ bool packetioInitFlag = false;
  */
 int sendFrame(const void* buf, int len, 
               int ethtype, const void* destmac, int id) {
-    uint8_t* framebuf = (uint8_t*)malloc(len + 14);
-    memcpy(framebuf, destmac, 6);
-    if (getDeviceMac(id, (uint8_t*)framebuf + 6) < 0) {
+    if (!ETHER_IS_VALID_LEN(len + ETHER_HDR_LEN)) {
+        LOG(ERROR, "Invalid packet length");
         return -1;
     }
-    uint16_t ethtype_bigendian = htonl16((uint16_t)ethtype);
-    *((uint16_t*)&framebuf[12]) = ethtype_bigendian;
-    memcpy(framebuf + 14, buf, len);
-    return sendPacketOnDevice(id, framebuf, len + 14);
+    uint8_t framebuf[ETHER_MAX_LEN];
+    struct ether_header eh;
+    memcpy(eh.ether_dhost, destmac, 6);
+    if (getDeviceMac(id, eh.ether_shost) < 0) {
+        return -1;
+    }
+    eh.ether_type = htonl16((uint16_t)ethtype);
+    memcpy(framebuf, &eh, ETHER_HDR_LEN);
+    memcpy(framebuf + ETHER_HDR_LEN, buf, len);
+    return sendPacketOnDevice(id, framebuf, len + ETHER_HDR_LEN);
 }
 
 /** 
@@ -44,7 +48,7 @@ int sendFrame(const void* buf, int len,
 typedef int (*frameReceiveCallback)(const void*, int, int);
 
 frameReceiveCallback frCallback = NULL;
-pthread_rwlock_t *frCallbackRwlock;
+std::shared_mutex muFrCallback;
 
 /**
  * @brief Register a callback function to be called each time an Ethernet II 
@@ -55,20 +59,8 @@ pthread_rwlock_t *frCallbackRwlock;
  * @see frameReceiveCallback
  */
 int setFrameReceiveCallback(frameReceiveCallback callback) {
+    std::unique_lock<std::shared_mutex> lock(muFrCallback);
     frCallback = callback;
     return 0;
 }
 
-int packetioInit() {
-    if (packetioInitFlag)
-        return 0;
-    if (pthread_rwlock_init(frCallbackRwlock, NULL) != 0) {
-        // logPrint(FATAL, "Unable to init packetio, rwlock init failed.");
-        return -1;
-    }
-    return 0;
-}
-
-bool packetioIsInit() {
-    return packetioInitFlag;
-}
