@@ -38,4 +38,33 @@ uint64_t htonl64(uint64_t i64) {
     h.i32[1] = htonl32(tmp);
     return h.i64;
 }
+
+inline
+bool isHexPoint(char c) {
+    if ('0' <= c && c <= '9')
+        return true;
+    if ('a' <= c && c <= 'f')
+        return true;
+    if ('A' <= c && c <= 'F')
+        return true;
+    return false;
+}
+
+inline
+uint8_t chartobyte(char c) {
+    if ('0' <= c && c <= '9') {
+        return c - '0';
+    } else if ('a' <= c && c <= 'f') {
+        return c - 'a' + 10;
+    } else if ('A' <= c && c <= 'F') {
+        return c - 'A' + 10;
+    }
+    return -1;
+}
+
+inline
+uint8_t stringtobyte(char *buf) {
+    // caller check if buf contains a valid number
+    return chartobyte(buf[0]) * 16 + chartobyte(buf[1]);
+}
 #endif // NETUTILS_H
