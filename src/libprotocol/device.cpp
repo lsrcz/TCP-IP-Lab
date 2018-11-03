@@ -315,6 +315,6 @@ int sendPacketOnDevice(int id, const void *buf, int size) {
     return devices.sendPacketOnDevice(id, buf, size);
 }
 
-int getDeviceMac(int id, void *buf) {
+int getDeviceMAC(int id, void *buf) {
     return devices.getDeviceMAC(id, buf);
 }

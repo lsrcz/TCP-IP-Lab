@@ -124,5 +124,5 @@ void removeAllDevice();
 
 int sendPacketOnDevice(int device_descriptor, const void *buf, int size);
 
-int getDeviceMac(int device_descriptor, void *buf);
+int getDeviceMAC(int device_descriptor, void *buf);
 #endif // DEVICE_H
