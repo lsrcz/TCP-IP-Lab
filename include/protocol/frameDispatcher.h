@@ -8,11 +8,11 @@ class FrameDispatcher {
     std::shared_mutex mu;
     std::map<uint16_t, frameReceiveCallback> callbacks;
  public:
-    void addDispatcher(int protocol, frameReceiveCallback);
+    void addFrameDispatcher(int protocol, frameReceiveCallback);
     int processFrame(const void* frame, int len, int id);
 };
 
-void addDispatcher(int protocol, frameReceiveCallback c);
+void addFrameDispatcher(int protocol, frameReceiveCallback c);
 
 int defaultFrameReceiveCallback(const void*, int, int);
 
