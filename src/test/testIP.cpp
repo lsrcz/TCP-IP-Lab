@@ -2,7 +2,9 @@
 #include <protocol/ip.h>
 #include <protocol/packetio.h>
 #include <protocol/frameDispatcher.h>
+#include <protocol/api.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 int frame2IP(const void* buf, int len, int id) {
     printf("lenip: %d \n", len);
@@ -15,24 +17,26 @@ int frame2IP(const void* buf, int len, int id) {
 
 int testSendIPPacket() {
     struct in_addr src, dest;
-    src.s_addr = (1 << 24) + (175 << 16) + (16 << 8) + 172;
-    dest.s_addr = (203 << 24) + (175 << 16) + (16 << 8) + 172;
+    inet_aton("172.16.175.203", &src);
+    inet_aton("172.16.175.1", &dest);
     uint8_t buf[100];
     for (int i = 0; i < 100; ++i) {
         buf[i] = i;
     }
-    sendIPPacket(src, dest, IPPROTO_ICMP, buf, 100);
+    sendIPPacket(src, dest, 254, buf, 70);
     return 1;
 }
 
 void testRcvIP() {
-    setFrameReceiveCallback(defaultFrameReceiveCallback);
-    addFrameDispatcher(ETHERTYPE_IP, frame2IP);
-    sleep(20); 
+    //setFrameReceiveCallback(defaultFrameReceiveCallback);
+    
+    //addFrameDispatcher(ETHERTYPE_IP, frame2IP);
+    //sleep(20); 
 }
 
 int main() {
-    addDevice("lo");
+    initProtocol();
+    addInterfaceWithIP("ens33", "172.16.175.203");
     testSendIPPacket();
     testRcvIP();
 }

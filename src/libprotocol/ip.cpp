@@ -8,36 +8,73 @@
 #include <cstring>
 #include <map>
 #include <arpa/inet.h>
+#include <protocol/arp.h>
 
 std::map<int, in_addr> ip_map;
+std::map<in_addr_t, int> ip_map_inv;
 
-int registerDeviceIP(int device, const char* ip) {
+int registerDeviceIP(const int device, const char* ip) {
     in_addr iip;
-    if (inet_aton(ip, &iip) == 0)
+    if (inet_aton(ip, &iip) == 0) {
+        std::string msg = ip + std::string(" is not a valid ip address.");
+        ErrorBehavior eb(msg.c_str(), false, true);
+        ERROR_WITH_BEHAVIOR(eb, return -1);
+    }
+    if (registerDeviceIP(device, iip) < 0) {
         return -1;
-    ip_map[device] = iip;
+    }
     return 0;
 }
 
-void registerDeviceIP(int device, in_addr ip) {
+int registerDeviceIP(const int device, const in_addr ip) {
     ip_map[device] = ip;
+    ip_map_inv[ip.s_addr] = device;
+    return 0;
 }
 
-void deleteDeviceIP(int device) {
+void deleteDeviceIP(const int device) {
     auto iter = ip_map.find(device);
     if (iter == ip_map.end()) {
         return;
     }
+    in_addr_t s_addr = iter->second.s_addr;
     ip_map.erase(iter);
+    auto iter1 = ip_map_inv.find(s_addr);
+    if (iter1 == ip_map_inv.end()) {
+        // won't be executed
+        return;
+    }
+    ip_map_inv.erase(iter1);
 }
 
-int getDeviceIP(int device, in_addr* ip) {
+int getDeviceIP(const int device, in_addr* ip) {
     auto iter = ip_map.find(device);
     if (iter == ip_map.end()) {
         return -1;
     }
     *ip = iter->second;
     return 0;
+}
+
+int getIPDevice(const in_addr ip) {
+    auto iter = ip_map_inv.find(ip.s_addr);
+    if (iter == ip_map_inv.end()) {
+        return -1;
+    }
+    return iter->second;
+}
+
+uint16_t ip_chksum(uint8_t* ptr) {
+    uint32_t cksum = 0;
+    for (int i = 0; i < 20; i += 2) {
+        cksum += *(ptr + i + 1);
+        cksum += *(ptr + i) << 8;
+    }
+
+    while (cksum > 0xffff) {
+        cksum = (cksum >> 16) + (cksum & 0xffff);
+    }
+    return ~cksum;
 }
 
 union checksum_helper {
@@ -47,6 +84,7 @@ union checksum_helper {
 
 int sendIPPacket(const struct in_addr src, const struct in_addr dest,
                  int proto, const void *buf, int len) {
+    ErrorBehavior eb("", false, true);
     struct ip hdr;
     hdr.ip_v = 4;
     hdr.ip_hl = 5;
@@ -62,30 +100,33 @@ int sendIPPacket(const struct in_addr src, const struct in_addr dest,
     checksum_helper ch;
     ch.i = 0;
     for (int i = 0; i < 10; ++i) {
-        ch.i += *((uint16_t*)&hdr);
+        ch.i += *(((uint16_t*)&hdr) + i);
     }
-    hdr.ip_sum = htonl16(ch.s[0] + ch.s[1]);
-    int id = getFirstDevice();
-    if (id < 0) {
-        //logPrint(ERROR, "No available devices.");
-        return -1;
+    hdr.ip_sum = ~(ch.s[0] + ch.s[1]);
+    //hdr.ip_sum = ip_chksum((uint8_t*)&hdr);
+    int id;
+    if ((id = getIPDevice(src)) < 0) {
+        std::string msg = std::string("No device associates with ip address ") + inet_ntoa(src);
+        eb.msg = msg.c_str();
+        ERROR_WITH_BEHAVIOR(eb, return -1);
     }
     uint8_t* ipbuf = (uint8_t*)malloc(len + 20);
     memcpy(ipbuf, &hdr, 20);
     memcpy(ipbuf + 20, buf, len);
-    uint8_t mac[6] = {0x00,0x50,0x56,0xc0,0x00,0x08};
+    uint8_t mac[6];
+    if (getDeviceMAC(id, mac) < 0) {
+        eb.msg = "Can't get MAC address";
+        ERROR_WITH_BEHAVIOR(eb, return -1);
+    }
     return sendFrame(ipbuf, len + 20, ETHERTYPE_IP, mac, id);
 }
 
-IPPacketReceiveCallback IPCallbackVector[IPPROTO_MAX];
-pthread_rwlock_t *IPCallbackVectorRwlock;
+IPPacketReceiveCallback ipCallback  = NULL;
+std::shared_mutex muIPCallback;
 
-int setIPPacketReceiveCallback(int protocol, IPPacketReceiveCallback callback) {
-    if (protocol >= IPPROTO_MAX || protocol < 0)
-        return -1;
-    pthread_rwlock_wrlock(IPCallbackVectorRwlock);
-    IPCallbackVector[protocol] = callback;
-    pthread_rwlock_unlock(IPCallbackVectorRwlock);
+int setIPPacketReceiveCallback(IPPacketReceiveCallback callback) {
+    std::unique_lock<std::shared_mutex> lock(muIPCallback);
+    ipCallback = callback;
     return 0;
 }
 

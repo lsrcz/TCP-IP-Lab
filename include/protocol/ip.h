@@ -7,10 +7,11 @@
 #define IP_H
 #include <netinet/ip.h>
 
-int registerDeviceIP(int device, const char* ipstr);
-void registerDeviceIP(int device, in_addr ip);
-void deleteDeviceIP(int device);
-int getDeviceIP(int device, in_addr* ip);
+int registerDeviceIP(const int device, const char* ipstr);
+int registerDeviceIP(const int device, const in_addr ip);
+void deleteDeviceIP(const int device);
+int getDeviceIP(const int device, in_addr* ip);
+int getIPDevice(const in_addr ip);
 /**
  * @brief Send an IP packet to specified host. 
  *
@@ -42,8 +43,7 @@ typedef int (*IPPacketReceiveCallback)(const void* buf, int len);
  * @return 0 on success, -1 on error.
  * @see IPPacketReceiveCallback
  */
-// I modified the function prototype to support multiple transport layer protocols
-int setIPPacketReceiveCallback(int protocol, IPPacketReceiveCallback callback);
+int setIPPacketReceiveCallback(IPPacketReceiveCallback callback);
 
 /**
  * @brief Manully add an item to routing table. Useful when talking with real 
