@@ -36,6 +36,7 @@ void deleteDeviceARP(int id) {
 
 int sendARPRequest(in_addr ip, int device) {
     arpPacket ap;
+    memset(&ap, 0, sizeof(ap));
     ap.hrd = 0x0100;
     ap.pro = 0x0008;
     ap.hln = 6;
@@ -48,7 +49,7 @@ int sendARPRequest(in_addr ip, int device) {
         return -1;
     }
     uint8_t broadcastMAC[] = {0xff,0xff,0xff,0xff,0xff,0xff}; 
-    memcpy(&ap.destmac, broadcastMAC, 6);
+    
     ap.destip = ip;
     if (sendFrame(&ap, 28, ETHERTYPE_ARP, broadcastMAC, device) < 0)
         return -1;
@@ -194,6 +195,8 @@ int arpFrameReceiveCallback(const void* packet, int len, int id) {
                     }
                     ap->sendermac = m;
                     ap->op = 0x0200;
+                    LOG(INFO, "Sending reply");
+                    
                     if (sendFrame(ap, 28, ETHERTYPE_ARP, &(ap->destmac), id) < 0) {
                         ERROR_WITH_BEHAVIOR(eb, return -1);
                     }
