@@ -1,6 +1,7 @@
 #ifndef NETUTILS_H
 #define NETUTILS_H
 #include <cstdint>
+#include <cstring>
 
 union htonl_helper {
     uint64_t i64;
@@ -70,7 +71,7 @@ uint8_t stringtobyte(char *buf) {
 struct MAC {
     uint8_t mac[6];
     inline
-    bool operator==(const MAC& rhs) {
+    bool operator==(const MAC& rhs) const {
         for (int i = 0; i < 6; ++i) {
             if (mac[i] != rhs.mac[i])
                 return false;
@@ -78,11 +79,22 @@ struct MAC {
         return true;
     }
     inline
-    bool operator!=(const MAC& rhs) {
+    bool operator!=(const MAC& rhs) const {
         return !(*this == rhs);
     }
     inline
-    std::string toString() {
+    bool operator<(const MAC& rhs) const {
+        for (int i = 0; i < 6; ++i) {
+            if (mac[i] < rhs.mac[i]) {
+                return true;
+            } else if (mac[i] > rhs.mac[i]) {
+                return false;
+            }
+        }
+        return false;
+    }
+    inline
+    std::string toString() const {
         char buf[20];
         snprintf(buf, 20, "%02x:%02x:%02x:%02x:%02x:%02x",
                  mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
