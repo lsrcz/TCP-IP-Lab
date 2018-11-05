@@ -2,10 +2,10 @@
 #include <utils/logutils.h>
 #include <utils/netutils.h>
 
-void FrameDispatcher::addFrameDispatcher(int protocol, frameReceiveCallback c) {
+void FrameDispatcher::addFrameDispatcher(uint16_t protocol, frameReceiveCallback c) {
     std::unique_lock<std::shared_mutex> lock(mu);
     char buf[200];
-    snprintf(buf, 200, "Registered dispatcher for protocol id %d", protocol);
+    snprintf(buf, 200, "Registered dispatcher for protocol id 0x%04x", protocol);
     LOG(INFO, buf);
     callbacks[protocol] = c;
 }
@@ -23,7 +23,7 @@ int FrameDispatcher::processFrame(const void* frame, int len, int id) {
 
 FrameDispatcher fd;
 
-void addFrameDispatcher(int protocol, frameReceiveCallback c) {
+void addFrameDispatcher(uint16_t protocol, frameReceiveCallback c) {
     fd.addFrameDispatcher(protocol, c);
 }
 int defaultFrameReceiveCallback(const void* frame, int len, int id) {
