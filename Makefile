@@ -13,7 +13,7 @@ export BUILDDIR
 SUBBUILDDIR = bin lib obj
 BUILDDIRS = $(patsubst %,$(BUILDDIR)/%,$(SUBBUILDDIR))
 
-BUILDPHASES = libprotocol test
+BUILDPHASES = libprotocol test app
 
 all: builddir
 	for d in $(BUILDPHASES) ; do \
@@ -22,6 +22,7 @@ all: builddir
 	done \
 
 test: libprotocol
+app: libprotocol
 $(BUILDPHASES): builddir
 	make -C $(SRCDIR)/$@
 
