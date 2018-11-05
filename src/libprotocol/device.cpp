@@ -32,25 +32,6 @@ void pcapHandler(u_char* user, const struct pcap_pkthdr *h, const u_char *byte) 
     handler_arg* arg = (handler_arg*)user;
     int id = arg->id;
     char msgBuf[1000];
-    int ok = 1;
-    for (int i = 0; i < 6; ++i) {
-        if (byte[i] != 0xff) {
-            ok = 0;
-            break;
-        }
-    }
-    if (ok == 0) {
-        ok = 1;
-        for (int i = 0; i < 6; ++i) {
-            if (byte[i] != arg->mac[i]) {
-                ok = 0;
-                break;
-            }
-        }
-    }
-    if (ok == 0) {
-        return;
-    }
     if (h->len != h->caplen) {
         sprintf(msgBuf, "Abandon partial packet on id %d.", id);
         //logPrint(WARNING, msgBuf);

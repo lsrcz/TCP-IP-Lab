@@ -1,4 +1,5 @@
 #include <protocol/frameDispatcher.h>
+#include <protocol/device.h>
 #include <utils/logutils.h>
 #include <utils/netutils.h>
 
@@ -10,9 +11,31 @@ void FrameDispatcher::addFrameDispatcher(uint16_t protocol, frameReceiveCallback
     callbacks[protocol] = c;
 }
 int FrameDispatcher::processFrame(const void* frame, int len, int id) {
-    printf("%d, ", id);
-    printf("%d\n", len);
     std::shared_lock<std::shared_mutex> lock(mu);
+
+    int ok = 1;
+    for (int i = 0; i < 6; ++i) {
+        if (((uint8_t*)frame)[i] != 0xff) {
+            ok = 0;
+            break;
+        }
+    }
+    if (ok == 0) {
+        ok = 1;
+        for (int i = 0; i < 6; ++i) {
+            uint8_t m[6];
+            if (getDeviceMAC(id, m) < 0)
+                return -1;
+            if (((uint8_t*)frame)[i] != m[i]) {
+                ok = 0;
+                break;
+            }
+        }
+    }
+    if (ok == 0) {
+        return -1;
+    }
+    
     char buf[200];
     if (len >= ETHER_MAX_LEN)
         return -2;
