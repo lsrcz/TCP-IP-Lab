@@ -23,20 +23,22 @@ int testSendIPPacket() {
     for (int i = 0; i < 100; ++i) {
         buf[i] = i;
     }
-    sendIPPacket(src, dest, 254, buf, 70);
+
+    return sendIPPacket(src, dest, 254, buf, 70);
     return 1;
 }
 
 void testRcvIP() {
     //setFrameReceiveCallback(defaultFrameReceiveCallback);
     
-    //addFrameDispatcher(ETHERTYPE_IP, frame2IP);
-    //sleep(20); 
+    addFrameDispatcher(ETHERTYPE_IP, frame2IP);
 }
 
 int main() {
     initProtocol();
-    addInterfaceWithIP("ens33", "172.16.175.203");
-    testSendIPPacket();
+    addInterfaceWithIP("v2p", "172.16.175.1");
+    addInterfaceWithIP("v1p", "172.16.175.203"); 
     testRcvIP();
+    printf("%d\n", testSendIPPacket());
+    //sleep(100);
 }

@@ -114,7 +114,7 @@ int sendIPPacket(const struct in_addr src, const struct in_addr dest,
     memcpy(ipbuf, &hdr, 20);
     memcpy(ipbuf + 20, buf, len);
     uint8_t mac[6];
-    if (getDeviceMAC(id, mac) < 0) {
+    if (request_arp(dest, mac) < 0) {
         eb.msg = "Can't get MAC address";
         ERROR_WITH_BEHAVIOR(eb, return -1);
     }
