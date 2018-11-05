@@ -17,7 +17,7 @@ int addInterfaceWithIP(const std::string& name, in_addr ip) {
     if ((id = addDevice(name.c_str())) < 0)
         return -1;
     if (sendGratuitousARPRequest(ip, id) == -1) {
-        removeInterfaceAndCleanup( int id )(id);
+        removeInterfaceAndCleanup(id);
         return -1;
     }
     registerDeviceIP(id, ip);

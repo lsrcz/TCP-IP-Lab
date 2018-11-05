@@ -3,7 +3,12 @@
 
 int main() {
     initProtocol();
-    int id = addInterfaceWithIP("ens33", "172.16.175.8");
+    if (addInterfaceWithIP("ens33", "172.16.175.1") == 0) {
+        printf("Should not add ens33 with 172.16.175.1\n");
+    }
+    if (addInterfaceWithIP("ens33", "172.16.175.203") == -1) {
+        printf("Should be able to add ens33 with 172.16.175.203\n");
+    }
     int id1 = addInterfaceWithIP("lo", "127.0.0.1");
     in_addr ip;
     inet_aton("127.0.0.1", &ip);

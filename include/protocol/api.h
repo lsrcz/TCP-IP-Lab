@@ -10,6 +10,6 @@
 
 void initProtocol();
 int addInterfaceWithIP(const std::string& name, in_addr ip);
-int addInterfaceWithIP(const std::string& name, const std::string& ip);
+int addInterfaceWithIP(const std::string& name, const std::string& ipstr);
 
 #endif
