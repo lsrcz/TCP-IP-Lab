@@ -12,7 +12,7 @@ class FrameDispatcher {
     int processFrame(const void* frame, int len, int id);
 };
 
-void addFrameDispatcher(UINT_LEAST16_WIDTH protocol, frameReceiveCallback c);
+void addFrameDispatcher(uint16_t protocol, frameReceiveCallback c);
 
 int defaultFrameReceiveCallback(const void*, int, int);
 

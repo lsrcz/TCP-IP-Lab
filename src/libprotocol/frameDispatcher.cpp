@@ -10,6 +10,8 @@ void FrameDispatcher::addFrameDispatcher(uint16_t protocol, frameReceiveCallback
     callbacks[protocol] = c;
 }
 int FrameDispatcher::processFrame(const void* frame, int len, int id) {
+    printf("%d, ", id);
+    printf("%d\n", len);
     std::shared_lock<std::shared_mutex> lock(mu);
     char buf[200];
     if (len >= ETHER_MAX_LEN)
