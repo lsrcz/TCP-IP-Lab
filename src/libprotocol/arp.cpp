@@ -187,6 +187,7 @@ int arpFrameReceiveCallback(const void* packet, int len, int id) {
                     LOG(INFO, "Ignore gratuitous ARP");
                     return 0;
                 } else if (ap->senderip.s_addr == ap->destip.s_addr && ap->destmac == m && ap->sendermac != ap->destmac) {
+                    LOG(WARNING, "Gratuitous ARP reply detected");
                     arp_cache[id][ap->senderip.s_addr] = ap->sendermac;
                     arp_cv.notify_all();
                 }
