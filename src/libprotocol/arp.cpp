@@ -161,7 +161,9 @@ int sendGratuitousARPRequest(in_addr ip, int device) {
 int arpFrameReceiveCallback(const void* packet, int len, int id) {
     std::unique_lock<std::shared_mutex> lock(arp_mu);
     ErrorBehavior eb("ARP incoming packet processing failed", false, true);
-    LOG(INFO, "Receiving ARP packet on device");
+    char buf[200];
+    snprintf(buf, 200, "Receiving ARP packet on device %d", id);
+    LOG(INFO, buf);
 
     arpPacket *ap = (arpPacket*)packet;
     if (ap->hrd == 0x0100 && ap->hln == 6) {
