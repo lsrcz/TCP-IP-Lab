@@ -9,26 +9,7 @@
 #include <condition_variable>
 #include <chrono>
 #include <protocol/arp.h>
-
-struct MAC {
-    uint8_t mac[6];
-    bool operator==(const MAC& rhs) {
-        for (int i = 0; i < 6; ++i) {
-            if (mac[i] != rhs.mac[i])
-                return false;
-        }
-        return true;
-    }
-    bool operator!=(const MAC& rhs) {
-        return !(*this == rhs);
-    }
-    std::string toString() {
-        char buf[20];
-        snprintf(buf, 20, "%02x:%02x:%02x:%02x:%02x:%02x",
-                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-        return buf;
-    }
-};
+#include <utils/netutils.h>
 
 struct arpPacket {
     uint16_t hrd;

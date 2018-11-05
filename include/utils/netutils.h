@@ -67,4 +67,27 @@ uint8_t stringtobyte(char *buf) {
     // caller check if buf contains a valid number
     return chartobyte(buf[0]) * 16 + chartobyte(buf[1]);
 }
+struct MAC {
+    uint8_t mac[6];
+    inline
+    bool operator==(const MAC& rhs) {
+        for (int i = 0; i < 6; ++i) {
+            if (mac[i] != rhs.mac[i])
+                return false;
+        }
+        return true;
+    }
+    inline
+    bool operator!=(const MAC& rhs) {
+        return !(*this == rhs);
+    }
+    inline
+    std::string toString() {
+        char buf[20];
+        snprintf(buf, 20, "%02x:%02x:%02x:%02x:%02x:%02x",
+                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        return buf;
+    }
+};
+
 #endif // NETUTILS_H
