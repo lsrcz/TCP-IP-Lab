@@ -45,11 +45,13 @@ int sendARPRequest(in_addr ip, int device) {
     if (getDeviceMAC(device, &ap.sendermac) == -1) {
         return -1;
     }
-    if (getDeviceIP(device, &ap.senderip) == -1) {
+    IP senderip;
+    if (getDeviceIP(device, &senderip) == -1) {
         return -1;
     }
+    ap.senderip = senderip.ip;
     uint8_t broadcastMAC[] = {0xff,0xff,0xff,0xff,0xff,0xff}; 
-    
+
     ap.destip = ip;
     if (sendFrame(&ap, 28, ETHERTYPE_ARP, broadcastMAC, device) < 0)
         return -1;
@@ -160,8 +162,9 @@ int arpFrameReceiveCallback(const void* packet, int len, int id) {
                 arp_cv.notify_all();
                 merge_flag = true;
             }
+            IP fip;
             in_addr ip;
-            if (getDeviceIP(id, &ip) < 0) {
+            if (getDeviceIP(id, &fip) < 0) {
                 MAC m;
                 if (getDeviceMAC(id, &m) < 0) {
                     ERROR_WITH_BEHAVIOR(eb, return -1);
@@ -176,6 +179,7 @@ int arpFrameReceiveCallback(const void* packet, int len, int id) {
                     arp_cv.notify_all();
                 }
             }
+            ip = fip.ip;
             if (ip.s_addr == ap->destip.s_addr) {
                 if (!merge_flag) {
                     std::string msg = std::string("Set ARP cache for ") +

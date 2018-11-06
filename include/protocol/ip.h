@@ -6,11 +6,12 @@
 #ifndef IP_H
 #define IP_H
 #include <netinet/ip.h>
+#include <utils/netutils.h>
 
-int registerDeviceIP(const int device, const char* ipstr);
-int registerDeviceIP(const int device, const in_addr ip);
+int registerDeviceIP(const int device, const char* ipstr, const char* subnet_mask);
+int registerDeviceIP(const int device, const in_addr ip, const in_addr subnet_mask);
 void deleteDeviceIP(const int device);
-int getDeviceIP(const int device, in_addr* ip);
+int getDeviceIP(const int device, IP* ip);
 int getIPDevice(const in_addr ip);
 /**
  * @brief Send an IP packet to specified host. 

@@ -35,7 +35,7 @@ int FrameDispatcher::processFrame(const void* frame, int len, int id) {
     if (ok == 0) {
         return -1;
     }
-    
+
     char buf[200];
     if (len >= ETHER_MAX_LEN)
         return -2;

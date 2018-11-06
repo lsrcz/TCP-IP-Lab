@@ -2,6 +2,7 @@
 #define NETUTILS_H
 #include <cstdint>
 #include <cstring>
+#include <string>
 
 union htonl_helper {
     uint64_t i64;
@@ -100,6 +101,16 @@ struct MAC {
                  mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
         return buf;
     }
+};
+
+struct IP {
+    in_addr ip;
+    in_addr subnet_mask;
+    inline
+    IP(in_addr ip, in_addr subnet_mask)
+        : ip(ip), subnet_mask(subnet_mask) {}
+    inline
+    IP() {}
 };
 
 #endif // NETUTILS_H
