@@ -70,24 +70,6 @@ int getIPDevice(const in_addr ip) {
     return iter->second;
 }
 
-uint16_t ip_chksum(uint8_t* ptr) {
-    uint32_t cksum = 0;
-    for (int i = 0; i < 20; i += 2) {
-        cksum += *(ptr + i + 1);
-        cksum += *(ptr + i) << 8;
-    }
-
-    while (cksum > 0xffff) {
-        cksum = (cksum >> 16) + (cksum & 0xffff);
-    }
-    return ~cksum;
-}
-
-union checksum_helper {
-    uint32_t i;
-    uint16_t s[2];
-};
-
 bool isMulticastIP(const struct in_addr src) {
     uint8_t fst = *((const uint8_t*)&src);
     return fst >= 224 && fst <= 239;
@@ -115,13 +97,7 @@ int sendIPPacket(const struct in_addr src, const struct in_addr dest,
     hdr.ip_sum = 0;
     hdr.ip_src = src;
     hdr.ip_dst = dest;
-    checksum_helper ch;
-    ch.i = 0;
-    for (int i = 0; i < 10; ++i) {
-        ch.i += *(((uint16_t*)&hdr) + i);
-    }
-    hdr.ip_sum = ~(ch.s[0] + ch.s[1]);
-    //hdr.ip_sum = ip_chksum((uint8_t*)&hdr);
+    hdr.ip_sum = htonl16(chksum((uint8_t*)&hdr));
     int id;
     if ((id = getIPDevice(src)) < 0) {
         std::string msg = std::string("No device associates with ip address ") + inet_ntoa(src);
