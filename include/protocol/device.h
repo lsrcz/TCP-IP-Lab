@@ -27,6 +27,8 @@
 #include <wrapper/pthread.h>
 #include <mutex>
 #include <shared_mutex>
+#include <utils/netutils.h>
+#include <map>
 
 
 struct device_t {
@@ -77,6 +79,7 @@ struct device_t {
 };
 
 class device_list_t {
+    std::map<int, MAC> mac_addr;
     std::list<device_t> devices;
     mutable std::shared_mutex mu;
     auto getDeviceIter(std::string name);
