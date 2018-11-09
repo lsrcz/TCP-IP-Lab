@@ -4,6 +4,7 @@
 #include <cstring>
 #include <string>
 #include <chrono>
+#include <arpa/inet.h>
 
 union htonl_helper {
     uint64_t i64;
@@ -112,21 +113,23 @@ struct IP {
         : ip(ip), subnet_mask(subnet_mask) {}
     inline
     IP() {}
+    inline
+    IP(const IP& rhs) {
+        ip = rhs.ip;
+        subnet_mask = rhs.subnet_mask;
+    }
+    inline
+    IP& operator=(const IP& rhs) {
+        ip = rhs.ip;
+        subnet_mask = rhs.subnet_mask;
+        return *this;
+    }
 };
 
 inline
-uint64_t getTimeStamp() {
-    std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> tp =
-        std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
-    auto tmp = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch());
-    uint64_t timestamp = tmp.count();
-    return timestamp;
-}
-
-inline
-uint16_t chksum(uint8_t* ptr) {
+uint16_t chksum(uint8_t* ptr, int len) {
     uint32_t cksum = 0;
-    for (int i = 0; i < 20; i += 2) {
+    for (int i = 0; i < len; i += 2) {
         cksum += *(ptr + i + 1);
         cksum += *(ptr + i) << 8;
     }
