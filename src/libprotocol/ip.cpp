@@ -8,10 +8,12 @@
 #include <cstring>
 #include <map>
 #include <arpa/inet.h>
+#include <shared_mutex>
 #include <protocol/arp.h>
 
 std::map<int, IP> ip_map;
 std::map<in_addr_t, int> ip_map_inv;
+std::shared_mutex ipmu;
 
 int registerDeviceIP(const int device, const char* ip, const char* subnet_mask) {
     in_addr iip;
@@ -33,12 +35,14 @@ int registerDeviceIP(const int device, const char* ip, const char* subnet_mask) 
 }
 
 int registerDeviceIP(const int device, const in_addr ip, const in_addr subnet_mask) {
+    std::unique_lock<std::shared_mutex> lock(ipmu);
     ip_map[device] = {ip, subnet_mask};
     ip_map_inv[ip.s_addr] = device;
     return 0;
 }
 
 void deleteDeviceIP(const int device) {
+    std::unique_lock<std::shared_mutex> lock(ipmu);
     auto iter = ip_map.find(device);
     if (iter == ip_map.end()) {
         return;
@@ -54,6 +58,7 @@ void deleteDeviceIP(const int device) {
 }
 
 int getDeviceIP(const int device, IP* ip) {
+    std::shared_lock<std::shared_mutex> lock(ipmu);
     auto iter = ip_map.find(device);
     if (iter == ip_map.end()) {
         return -1;
@@ -63,11 +68,22 @@ int getDeviceIP(const int device, IP* ip) {
 }
 
 int getIPDevice(const in_addr ip) {
+    std::shared_lock<std::shared_mutex> lock(ipmu);
     auto iter = ip_map_inv.find(ip.s_addr);
     if (iter == ip_map_inv.end()) {
         return -1;
     }
     return iter->second;
+}
+
+bool isLocalIP(const in_addr src) {
+    std::shared_lock<std::shared_mutex> lock(ipmu);
+    for (auto i: ip_map_inv) {
+        if (src.s_addr == i.first) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool isMulticastIP(const struct in_addr src) {
@@ -97,7 +113,7 @@ int sendIPPacket(const struct in_addr src, const struct in_addr dest,
     hdr.ip_sum = 0;
     hdr.ip_src = src;
     hdr.ip_dst = dest;
-    hdr.ip_sum = htonl16(chksum((uint8_t*)&hdr));
+    hdr.ip_sum = htonl16(chksum((uint8_t*)&hdr, 20));
     int id;
     if ((id = getIPDevice(src)) < 0) {
         std::string msg = std::string("No device associates with ip address ") + inet_ntoa(src);

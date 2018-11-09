@@ -7,12 +7,14 @@
 #define IP_H
 #include <netinet/ip.h>
 #include <utils/netutils.h>
+#include <utils/printutils.h>
 
 int registerDeviceIP(const int device, const char* ipstr, const char* subnet_mask);
 int registerDeviceIP(const int device, const in_addr ip, const in_addr subnet_mask);
 void deleteDeviceIP(const int device);
 int getDeviceIP(const int device, IP* ip);
 int getIPDevice(const in_addr ip);
+bool isLocalIP(const in_addr ip);
 /**
  * @brief Send an IP packet to specified host. 
  *
@@ -34,7 +36,7 @@ int sendIPPacket(const struct in_addr src, const struct in_addr dest,
  * @return 0 on success, -1 on error.
  * @see addDevice
  */
-typedef int (*IPPacketReceiveCallback)(const void* buf, int len);
+typedef int (*IPPacketReceiveCallback)(const void* buf, int len, int id);
 
 /**
  * @brief Register a callback function to be called each time an IP packet
