@@ -125,6 +125,10 @@ struct IP {
         subnet_mask = rhs.subnet_mask;
         return *this;
     }
+    inline
+    bool operator<(const IP& rhs) const {
+        return ip.s_addr < rhs.ip.s_addr;
+    }
 };
 
 static_assert(std::is_standard_layout_v<IP>, "IP struct is not in standard layout");
