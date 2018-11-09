@@ -104,6 +104,7 @@ struct MAC {
         return buf;
     }
 };
+static_assert(std::is_standard_layout_v<MAC>, "MAC struct is not in standard layout");
 
 struct IP {
     in_addr ip;
@@ -125,6 +126,8 @@ struct IP {
         return *this;
     }
 };
+
+static_assert(std::is_standard_layout_v<IP>, "IP struct is not in standard layout");
 
 inline
 uint16_t chksum(uint8_t* ptr, int len) {
