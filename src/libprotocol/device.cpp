@@ -179,10 +179,10 @@ int device_list_t::addDevice(const std::string& device) {
     if (!d.init())
         return -1;
     int id = d.id;
-    devices.push_back(std::move(d));
     MAC m;
-    getDeviceMAC(id, &m);
+    memcpy(&m, d.mac, 6);
     mac_addr[id] = m;
+    devices.push_back(std::move(d));
     return id;
 }
 int device_list_t::findDevice(const std::string &name) {
@@ -237,7 +237,7 @@ int device_list_t::getDeviceMAC(int id, void *buf) {
     auto iter = mac_addr.find(id);
     if (iter == mac_addr.end())
         return -1;
-    memcpy(buf, iter->second, 6);
+    memcpy(buf, &(iter->second), 6);
     return 0;
 }
 
