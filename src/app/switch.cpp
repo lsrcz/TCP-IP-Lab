@@ -2,6 +2,7 @@
 #include <utils/netutils.h>
 #include <map>
 #include <string>
+#include <utils/printutils.h>
 
 std::map<MAC, std::pair<bool,int>> mac_cache;
 
@@ -22,7 +23,9 @@ int addSwitchPort(const std::string& name) {
     return 0;
 }
 
+
 int switchReceiveCallback(const void* buf, int len, int id) {
+    printIncomingFrame(buf, len);
     if (!ETHER_IS_VALID_LEN(len + ETHER_CRC_LEN)) {
         return -1;
     }
@@ -35,7 +38,7 @@ int switchReceiveCallback(const void* buf, int len, int id) {
 
     auto iter = mac_cache.find(dst);
     if (iter == mac_cache.end()) {
-        // cache miss
+        // cache miss, or multicast
         for (int d: getAllDevice()) {
             if (d != id) {
                 if (sendPacketOnDevice(d, buf, len) < 0) {

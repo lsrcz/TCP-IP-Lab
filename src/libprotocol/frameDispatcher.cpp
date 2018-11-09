@@ -2,6 +2,7 @@
 #include <protocol/device.h>
 #include <utils/logutils.h>
 #include <utils/netutils.h>
+#include <utils/printutils.h>
 
 void FrameDispatcher::addFrameDispatcher(uint16_t protocol, frameReceiveCallback c) {
     std::unique_lock<std::shared_mutex> lock(mu);
@@ -11,6 +12,8 @@ void FrameDispatcher::addFrameDispatcher(uint16_t protocol, frameReceiveCallback
     callbacks[protocol] = c;
 }
 int FrameDispatcher::processFrame(const void* frame, int len, int id) {
+    LOG(DEBUG, "Frame received");
+    printIncomingFrame(frame, len);
     std::shared_lock<std::shared_mutex> lock(mu);
 
     int ok = 1;
@@ -33,8 +36,14 @@ int FrameDispatcher::processFrame(const void* frame, int len, int id) {
         }
     }
     if (ok == 0) {
+        uint8_t* m = (uint8_t*)frame;
+        if (m[0] == 0x01 && m[1] == 0 && m[2] == 0xC2 && (m[3] & 0x80) == 0)
+            ok = 1;
+    }
+    if (ok == 0) {
         return -1;
     }
+    LOG(DEBUG, "Frame verified");
 
     char buf[200];
     if (len >= ETHER_MAX_LEN)
