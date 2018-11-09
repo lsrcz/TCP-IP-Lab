@@ -1,9 +1,11 @@
 #include <protocol/api.h>
 #include <arpa/inet.h>
+#include <protocol/IPDispatcher.h>
 
 void initProtocol() {
     setFrameReceiveCallback(defaultFrameReceiveCallback);
     addFrameDispatcher(ETHERTYPE_ARP, arpFrameReceiveCallback);
+    addFrameDispatcher(ETHERTYPE_IP, defaultIPPacketReceiveCallback);
 }
 
 void removeInterfaceAndCleanup(int id) {
