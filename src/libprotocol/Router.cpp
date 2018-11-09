@@ -13,6 +13,7 @@
 #include <shared_mutex>
 #include <condition_variable>
 #include <deque>
+#include <wrapper/pthread.h>
 
 const in_addr Router::drip = std::invoke([](){
         in_addr ret;
@@ -75,7 +76,6 @@ int Router::controlPacketRecv(const void* buf, int len, int id) {
     int ip_header_len = iphdr->ip_hl * 4;
     const RouterHeader *header = (const RouterHeader*)(((uint8_t*)buf) + ip_header_len);
     uint16_t route_packet_len = htonl16(header->len);
-    printf("%d, %d\n", ip_header_len, route_packet_len);
     if (htonl16(header->len) + ip_header_len != len) {
         eb.msg = "Route control packet length error";
         ERROR_WITH_BEHAVIOR(eb, return -1);
@@ -94,4 +94,41 @@ int Router::controlPacketRecv(const void* buf, int len, int id) {
         ERROR_WITH_BEHAVIOR(eb, return -1);
     }
     return 0;
+}
+
+int Router::sendLinkStatePacket() {
+    std::unique_lock<std::shared_mutex> lock(mu);
+    std::vector<IP> vec;
+    for (auto &d: devs) {
+        for (const auto&i: d.second.getNeighborInformation()) {
+            vec.push_back(i);
+        }
+    }
+    for (auto &d: devs) {
+        if (d.second.sendLinkStatePacket(vec) < 0) {
+            char buf[200];
+            snprintf(buf, 200, "Error sending link state packet on device %d", d.first);
+            ErrorBehavior eb(buf,false,false);
+            ERROR_WITH_BEHAVIOR(eb,return -1;);
+        }
+    }
+    return 0;
+}
+
+Router::Router() {
+    linkstateThread = std::thread( [&]() {
+            std::unique_lock<std::mutex> lock(lsmu);
+            while (true) {
+                lscv.wait_for(lock, std::chrono::seconds(5));
+                this->sendLinkStatePacket();
+            }
+        });
+}
+
+Router::~Router() {
+    if (linkstateThread.joinable()) {
+        pthread_t p = linkstateThread.native_handle();
+        Pthread_cancel(p);
+        linkstateThread.join();
+    }
 }

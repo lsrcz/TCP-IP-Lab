@@ -25,7 +25,6 @@ int RouterNeighbor::update(RouterPort& rp, const in_addr* dr, const in_addr* bdr
     }
     using namespace std::chrono_literals;
     std::function<void(void)> task = [&](){
-        printf("Invoked\n");
         std::function<void(void)> innertask = [&](){
             rp.removeNeighbor(ip);
         };
@@ -34,7 +33,7 @@ int RouterNeighbor::update(RouterPort& rp, const in_addr* dr, const in_addr* bdr
     //std::function<void(void)> task1 = task;
     //std::invoke(task1);
     //rp.removeNeighbor(ip);
-    timeout.setTimer(3s, std::move(task));
+    timeout.setTimer(40s, std::move(task));
     return 0;
 }
 

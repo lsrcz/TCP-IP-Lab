@@ -37,6 +37,7 @@ void printRoutePacket(const void* buf, int len) {
     printIP(&hdr->subnetMask);
     printf("\n");
     if (hdr->type == HELLO) {
+        printf("type: HELLO\n");
         int list_len = (htonl16(hdr->len) - HELLO_HEADER_LEN) / 4;
         in_addr* ip_list = (in_addr*)(((HelloPacket*)hdr) + 1);
         printf("list len: %d\n", list_len);
@@ -44,6 +45,27 @@ void printRoutePacket(const void* buf, int len) {
         for (int i = 0; i < list_len; ++i) {
             printf("  ");
             printIP(ip_list + i);
+            printf("\n");
+        }
+    } else if (hdr->type == LINKSTATE) {
+        printf("type: LINKSTATE\n");
+        LinkstatePacket* packet = (LinkstatePacket*)hdr;
+        int list_len = (htonl16(hdr->len) - LINKSTATE_HEADER_LEN) / 8;
+        IP* ip_list = (IP*)(packet + 1);
+        printf("node ip: ");
+        printIP(&packet->ip);
+        printf("\n");
+        printf("node subnet mask: ");
+        printIP(&packet->subnet_mask);
+        printf("\n");
+        printf("timestamp: %d\n", htonl32(packet->timestamp));
+        printf("list len: %d\n", list_len);
+        printf("list: \n");
+        for (int i = 0; i < list_len; ++i) {
+            printf("  ");
+            printIP(ip_list + i);
+            printf("/");
+            printIP(((in_addr*)(ip_list + i)) + 1);
             printf("\n");
         }
     }

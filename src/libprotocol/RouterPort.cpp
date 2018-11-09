@@ -235,16 +235,12 @@ int RouterPort::recvHelloPacket(const void* packet, int len) {
     uint16_t hellopacketLen = htonl16(header->len);
     uint16_t numOfList = (hellopacketLen - HELLO_HEADER_LEN) >> 2;
     in_addr* neighborListHello = (in_addr*)(((uint8_t*)header) + HELLO_HEADER_LEN);
-    printf("nol%d\n", numOfList);
     if (header->subnetMask.s_addr != portIP.subnet_mask.s_addr) {
         char buf[200];
         snprintf(buf, 200, "Hello packet for different subnet on %d", device);
         LOG(WARNING, buf);
         return 0;
     } else {
-        LOG(DEBUG, "Hello packet received");
-        printf("Router status before\n");
-        printRouterStatus();
         in_addr from = header->ip;
         RouterNeighbor n(from);
         RouterNeighbor::STATE state = RouterNeighbor::ONEWAY;
@@ -252,8 +248,6 @@ int RouterPort::recvHelloPacket(const void* packet, int len) {
             std::unique_lock<std::shared_mutex> lock(ntmu);
 
             for (int i = 0; i < numOfList; ++i) {
-                printf("pr%d\n",i);
-                printIP(neighborListHello+i);
                 RouterNeighbor n1(neighborListHello[i]);
                 if (n1.ip.s_addr == portIP.ip.s_addr) {
                     state = RouterNeighbor::TWOWAY;
@@ -268,8 +262,6 @@ int RouterPort::recvHelloPacket(const void* packet, int len) {
             }
         }
 
-        printf("Router status mid\n");
-        printRouterStatus();
         if (portState == DOWN) {
             std::unique_lock<std::shared_mutex> lock1(ntmu);
             n.update(*this, &hheader->dr, &hheader->bdr, &state);
@@ -304,8 +296,6 @@ int RouterPort::recvHelloPacket(const void* packet, int len) {
                 //bdUpdateThread = std::thread(bdUpdateRoutine);
             }
         }
-        printf("Router status after\n");
-        printRouterStatus();
     }
     return 0;
 }
@@ -319,12 +309,55 @@ void RouterPort::removeNeighbor(in_addr ip) {
     RouterNeighbor n(ip);
     auto iter = neighborTable.find(n);
     if (iter != neighborTable.end()) {
-        printRouterStatus();
         neighborTable.erase(iter);
-        printRouterStatus();
     }
 }
 
 void RouterPort::addTask(std::function<void(void)> func) {
     taskQueue.push(std::move(func));
+}
+
+std::set<IP> RouterPort::getNeighborInformation() const {
+    std::set<IP> ret;
+    for (const auto& n: neighborTable) {
+        ret.insert({n.ip, portIP.subnet_mask});
+    }
+    return ret;
+}
+
+int RouterPort::sendLinkStatePacket(const std::vector<IP>&vec) {
+    LinkstatePacket lp;
+    RouterHeader &hdr = lp.hdr;
+    hdr.type = LINKSTATE;
+    uint16_t len = LINKSTATE_HEADER_LEN + vec.size() * 8;
+    hdr.len = htonl16(len);
+    hdr.ip = portIP.ip;
+    hdr.subnetMask = portIP.subnet_mask;
+    hdr.checksum = 0;
+    lp.ip = portIP.ip;
+    lp.subnet_mask = portIP.subnet_mask;
+    lp.timestamp = htonl32((uint32_t)getTimeStamp());
+    uint8_t buf[len];
+    memcpy(buf, &lp, LINKSTATE_HEADER_LEN);
+    memcpy(buf + LINKSTATE_HEADER_LEN, ((uint8_t*)vec.data()), vec.size() * sizeof(IP));
+    in_addr *iplist = (in_addr*)(((uint8_t*)buf) + LINKSTATE_HEADER_LEN);
+    ((RouterHeader*)buf)->checksum = htonl16(chksum(buf, len));
+    // originally designed for broadcast network
+    /*in_addr dest;
+      {
+      std::shared_lock<std::shared_mutex> lock(stmu);
+      if (state == DROTHER)
+      inet_aton("224.0.0.121", &dest);
+      else
+      inet_aton("224.0.0.120", &dest);
+      }*/
+    {
+        std::shared_lock<std::shared_mutex> lock(ntmu);
+        for (const auto&n : neighborTable) {
+            if (n.isSelf)
+                continue;
+            sendIPPacket(lp.ip, n.ip, ROUTER_PROTO_NUM, buf, len);
+        }
+    }
+    return 0;
 }

@@ -13,7 +13,6 @@ void FrameDispatcher::addFrameDispatcher(uint16_t protocol, frameReceiveCallback
 }
 int FrameDispatcher::processFrame(const void* frame, int len, int id) {
     LOG(DEBUG, "Frame received");
-    printIncomingFrame(frame, len);
     std::shared_lock<std::shared_mutex> lock(mu);
 
     int ok = 1;

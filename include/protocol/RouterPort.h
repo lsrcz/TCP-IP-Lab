@@ -8,6 +8,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include <protocol/RouterNeighbor.h>
+#include <vector>
 
 class RouterNeighbor;
 class RouterPort {
@@ -58,6 +59,8 @@ private:
     STATE getState();
     void removeNeighbor(in_addr ip);
     void addTask(std::function<void(void)> func);
+    std::set<IP> getNeighborInformation() const;
+    int sendLinkStatePacket(const std::vector<IP>&vec);
 };
 
 #endif // ROUTER_PORT_H
