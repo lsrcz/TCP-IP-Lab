@@ -70,8 +70,6 @@ static_assert(std::is_standard_layout_v<HelloPacket>, "Hello Packet is not in st
  * +------------+------------+------------+------------+
  * |                     timestamp                     |
  * +------------+------------+------------+------------+
- * |         length          |         checksum        |
- * +------------+------------+------------+------------+
  * |                neighbor information               |
  * +--                                               --+
  * |                       ...                         |
@@ -92,14 +90,9 @@ struct LinkstatePacket {
     in_addr ip;
     in_addr subnet_mask;
     uint32_t timestamp;
-    uint16_t length;
-    uint16_t checksum;
 };
-#define LINKSTATE_HEADER_LEN 32
+#define LINKSTATE_HEADER_LEN 28
 static_assert(sizeof(LinkstatePacket) == LINKSTATE_HEADER_LEN, "Linkstate packet length mismatch");
 static_assert(std::is_standard_layout_v<LinkstatePacket>, "Linkstate Packet is not in standard layout");
-
-
-
 
 #endif
