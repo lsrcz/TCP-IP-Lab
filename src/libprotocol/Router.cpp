@@ -89,7 +89,7 @@ int Router::controlPacketRecv(const void* buf, int len, int id) {
     // should be well-formed
     if (header->type == HELLO) {
         return port.recvHelloPacket(buf, len);
-    } else {
+    } else  {
         eb.msg = "Not implemented error";
         ERROR_WITH_BEHAVIOR(eb, return -1);
     }
