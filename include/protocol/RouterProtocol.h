@@ -22,7 +22,7 @@ enum routerPacketType: uint8_t {
  * +------------+------------+------------+------------+
  * |                   subnet mask                     |
  * +------------+------------+------------+------------+
- * |          checksum       |         padding         |
+ * |          checksum       |        router ID        |
  * +------------+------------+------------+------------+
  */
 struct RouterHeader {
@@ -32,7 +32,7 @@ struct RouterHeader {
     in_addr ip;
     in_addr subnetMask;
     uint16_t checksum;
-    uint16_t padding2;
+    uint16_t rid;
     int setIPByID(int id);
 };
 static_assert(sizeof(RouterHeader) == ROUTER_HEADER_LEN, "Header length mismatch");
@@ -45,12 +45,19 @@ static_assert(std::is_standard_layout_v<RouterHeader>, "Router header is not in 
  * +------------+------------+------------+------------+
  * |             backup deginated router               |
  * +------------+------------+------------+------------+
- * |                  neighbor ip                      |
+ * |                neighbor information               |
  * +--                                               --+
  * |                       ...                         |
  * +--                                               --+
  * |                                                   |
  * +------------+------------+------------+------------+
+ *
+ * neighbor information
+ * +------------+------------+------------+------------+
+ * |                    neighbor ip                    |
+ * +------------+------------+------------+------------+
+ * |        router ID        |
+ * +------------+------------+
  */
 struct HelloPacket {
     RouterHeader hdr;
@@ -61,37 +68,53 @@ struct HelloPacket {
 static_assert(sizeof(HelloPacket) == HELLO_HEADER_LEN, "Hello packet length mismatch");
 static_assert(std::is_standard_layout_v<HelloPacket>, "Hello Packet is not in standard layout");
 
+struct helloNeighborInformation {
+    in_addr ip;
+    uint16_t rid;
+} __attribute__((packed));
+
 /**
  * linkstate packet
  * +------------+------------+------------+------------+
- * |                      node ip                      |
+ * |        router ID        |        timestamp        |
  * +------------+------------+------------+------------+
- * |                  node subnet mask                 |
+ * |      num of ports       |     num of neighbors    |
  * +------------+------------+------------+------------+
- * |                     timestamp                     |
+ * |                 port information                  |
+ * +--                                               --+
+ * |                       ...                         |
+ * +--                                               --+
+ * |                                                   |
  * +------------+------------+------------+------------+
- * |                neighbor information               |
+ * |   neighbor information  |                         |
  * +--                                               --+
  * |                       ...                         |
  * +--                                               --+
  * |                                                   |
  * +------------+------------+------------+------------+
  *
+ * port information
+ * +------------+------------+------------+------------+
+ * |                      port IP                      |
+ * +------------+------------+------------+------------+
+ * |                 port subnet mask                  |
+ * +------------+------------+------------+------------+
+ *
  * neighbor information
- * +------------+------------+------------+------------+
- * |                     neighbor ip                   |
- * +------------+------------+------------+------------+
- * |                neighbor subnet mask               |
- * +------------+------------+------------+------------+
+ * +------------+------------+
+ * |        router ID        |
+ * +------------+------------+
  */
 
 struct LinkstatePacket {
     RouterHeader hdr;
-    in_addr ip;
-    in_addr subnet_mask;
-    uint32_t timestamp;
+    uint16_t rid;
+    uint16_t timestamp;
+    uint16_t nop;
+    uint16_t non;
 };
-#define LINKSTATE_HEADER_LEN 28
+
+#define LINKSTATE_HEADER_LEN 24
 static_assert(sizeof(LinkstatePacket) == LINKSTATE_HEADER_LEN, "Linkstate packet length mismatch");
 static_assert(std::is_standard_layout_v<LinkstatePacket>, "Linkstate Packet is not in standard layout");
 

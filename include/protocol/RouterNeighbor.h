@@ -9,6 +9,7 @@
 class RouterPort;
 
 struct RouterNeighbor {
+    uint16_t rid;
     in_addr ip;
     in_addr dr;
     in_addr bdr;
@@ -19,7 +20,7 @@ struct RouterNeighbor {
     std::mutex mu;
     Timer timeout;
     bool isSelf = false;
-    RouterNeighbor(in_addr);
+    RouterNeighbor(uint16_t, in_addr);
     int update(RouterPort& rp, const in_addr* dr, const in_addr* bdr, const STATE* st);
     bool operator<(const RouterNeighbor& rhs) const;
     bool operator==(const RouterNeighbor& rhs) const;

@@ -42,6 +42,10 @@ int IPPacketDispatcher::addRouterDev(int dev) {
     return router.addDevice(dev);
 }
 
+void IPPacketDispatcher::setRouterRID(uint16_t rid) {
+    router.setRID(rid);
+}
+
 IPPacketDispatcher IPpd;
 
 void addIPPacketDispatcher(uint8_t protocol, IPPacketReceiveCallback c) {
@@ -54,4 +58,8 @@ int defaultIPPacketReceiveCallback(const void* packet, int len, int id) {
 
 int addRouterDev(int dev) {
     return IPpd.addRouterDev(dev);
+}
+
+void setRouterRID(uint16_t rid) {
+    IPpd.setRouterRID(rid);
 }

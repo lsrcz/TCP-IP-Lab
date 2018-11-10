@@ -1,5 +1,6 @@
 #include <protocol/RouterPort.h>
 #include <protocol/RouterProtocol.h>
+#include <protocol/Router.h>
 #include <protocol/ip.h>
 #include <utils/netutils.h>
 #include <utils/errorutils.h>
@@ -165,7 +166,7 @@ void RouterPort::calculateDRBDR() {
     }
 }
 
-RouterPort::RouterPort() {}
+RouterPort::RouterPort(Router& router): router(router) {}
 
 int RouterPort::startDevice(int id) {
     std::unique_lock<std::shared_mutex> lockst(statemu);
@@ -178,7 +179,7 @@ int RouterPort::startDevice(int id) {
     }
     std::unique_lock<std::shared_mutex> lock(ntmu);
     resetDevice();
-    RouterNeighbor n(portIP.ip);
+    RouterNeighbor n(router.getRID(), portIP.ip);
     n.isSelf = true;
     n.state = RouterNeighbor::TWOWAY;
     neighborTable.insert(std::move(n));
@@ -204,16 +205,20 @@ int RouterPort::sendHelloPacket() {
     }
     in_addr dest;
     inet_aton("224.0.0.120", &dest);
-    uint16_t len = ROUTER_HEADER_LEN + 8 + neighborTable.size() * 4;
+    uint16_t len = HELLO_HEADER_LEN + neighborTable.size() * 6;
     hdr.len = htonl16(len);
+    hdr.rid = htonl16(router.getRID());
     uint8_t buf[hdr.len];
     memset(buf, 0, sizeof(buf));
     memcpy(buf, &hdr, ROUTER_HEADER_LEN);
     memcpy(buf + ROUTER_HEADER_LEN, &dr, 4);
     memcpy(buf + ROUTER_HEADER_LEN + 4, &bdr, 4);
     int i = 0;
+    helloNeighborInformation *neighbor_info = (helloNeighborInformation*)(buf + HELLO_HEADER_LEN);
     for (auto const& n: neighborTable) {
-        memcpy(buf + ROUTER_HEADER_LEN + 8 + i * 4, &n.ip, 4);
+        neighbor_info[i].ip = n.ip;
+        printf("%d\n", n.rid);
+        neighbor_info[i].rid = htonl16(n.rid);
         ++i;
     }
     hdr.checksum = htonl16(chksum(buf, len));
@@ -233,8 +238,8 @@ int RouterPort::recvHelloPacket(const void* packet, int len) {
     const RouterHeader* header = (const RouterHeader*)(((uint8_t*)packet) + ip_header_len);
     const HelloPacket* hheader = (const HelloPacket*)(((uint8_t*)packet) + ip_header_len);
     uint16_t hellopacketLen = htonl16(header->len);
-    uint16_t numOfList = (hellopacketLen - HELLO_HEADER_LEN) >> 2;
-    in_addr* neighborListHello = (in_addr*)(((uint8_t*)header) + HELLO_HEADER_LEN);
+    uint16_t numOfList = (hellopacketLen - HELLO_HEADER_LEN) / 6;
+    helloNeighborInformation* neighborListHello = (helloNeighborInformation*)(((uint8_t*)header) + HELLO_HEADER_LEN);
     if (header->subnetMask.s_addr != portIP.subnet_mask.s_addr) {
         char buf[200];
         snprintf(buf, 200, "Hello packet for different subnet on %d", device);
@@ -242,13 +247,14 @@ int RouterPort::recvHelloPacket(const void* packet, int len) {
         return 0;
     } else {
         in_addr from = header->ip;
-        RouterNeighbor n(from);
+        uint16_t rid = htonl16(header->rid);
+        RouterNeighbor n(rid, from);
         RouterNeighbor::STATE state = RouterNeighbor::ONEWAY;
         {
             std::unique_lock<std::shared_mutex> lock(ntmu);
 
             for (int i = 0; i < numOfList; ++i) {
-                RouterNeighbor n1(neighborListHello[i]);
+                RouterNeighbor n1(htonl16(neighborListHello[i].rid), neighborListHello[i].ip);
                 if (n1.ip.s_addr == portIP.ip.s_addr) {
                     state = RouterNeighbor::TWOWAY;
                 } else {
@@ -306,7 +312,7 @@ RouterPort::STATE RouterPort::getState() {
 
 void RouterPort::removeNeighbor(in_addr ip) {
     std::unique_lock<std::shared_mutex> ntmu;
-    RouterNeighbor n(ip);
+    RouterNeighbor n(0,ip);
     auto iter = neighborTable.find(n);
     if (iter != neighborTable.end()) {
         neighborTable.erase(iter);
@@ -325,22 +331,25 @@ std::set<IP> RouterPort::getNeighborInformation() const {
     return ret;
 }
 
-int RouterPort::sendLinkStatePacket(const std::vector<IP>&vec) {
+int RouterPort::sendLinkStatePacket(const std::vector<IP>&portInfo, const std::vector<uint16_t>&neighborInfo) {
     LinkstatePacket lp;
     RouterHeader &hdr = lp.hdr;
     hdr.type = LINKSTATE;
-    uint16_t len = LINKSTATE_HEADER_LEN + vec.size() * 8;
+    uint16_t len = LINKSTATE_HEADER_LEN + portInfo.size() * 8 + neighborInfo.size() * 2;
     hdr.len = htonl16(len);
     hdr.ip = portIP.ip;
     hdr.subnetMask = portIP.subnet_mask;
     hdr.checksum = 0;
-    lp.ip = portIP.ip;
-    lp.subnet_mask = portIP.subnet_mask;
-    lp.timestamp = htonl32((uint32_t)getTimeStamp());
+    lp.rid = htonl16(router.getRID());
+    lp.timestamp = htonl16((uint16_t)getTimeStamp());
+    lp.nop = htonl16((uint16_t)portInfo.size());
+    lp.non = htonl16((uint16_t)neighborInfo.size());
+
     uint8_t buf[len];
     memcpy(buf, &lp, LINKSTATE_HEADER_LEN);
-    memcpy(buf + LINKSTATE_HEADER_LEN, ((uint8_t*)vec.data()), vec.size() * sizeof(IP));
-    in_addr *iplist = (in_addr*)(((uint8_t*)buf) + LINKSTATE_HEADER_LEN);
+    memcpy(buf + LINKSTATE_HEADER_LEN, portInfo.data(), portInfo.size() * sizeof(IP));
+    memcpy(buf + LINKSTATE_HEADER_LEN + portInfo.size() * 8, neighborInfo.data(),
+           neighborInfo.size() * sizeof(uint16_t));
     ((RouterHeader*)buf)->checksum = htonl16(chksum(buf, len));
     // originally designed for broadcast network
     /*in_addr dest;
@@ -356,8 +365,21 @@ int RouterPort::sendLinkStatePacket(const std::vector<IP>&vec) {
         for (const auto&n : neighborTable) {
             if (n.isSelf)
                 continue;
-            sendIPPacket(lp.ip, n.ip, ROUTER_PROTO_NUM, buf, len);
+            sendIPPacket(hdr.ip, n.ip, ROUTER_PROTO_NUM, buf, len);
         }
     }
     return 0;
+}
+
+IP RouterPort::getIP() {
+    return portIP;
+}
+
+std::set<uint16_t> RouterPort::getNeighborRID() {
+    std::set<uint16_t> ret;
+    std::shared_lock<std::shared_mutex> lock(ntmu);
+    for (auto &n:neighborTable) {
+        ret.insert(n.rid);
+    }
+    return ret;
 }

@@ -10,6 +10,7 @@
 
 class Router {
     std::map<int, RouterPort> devs;
+    std::unique_ptr<uint16_t> rid;
     std::shared_mutex mu;
     std::thread linkstateThread;
     std::mutex lsmu;
@@ -22,6 +23,8 @@ class Router {
     int addDevice(int dev);
     int controlPacketRecv(const void* buf, int len, int id);
     int sendLinkStatePacket();
+    uint16_t getRID();
+    void setRID(uint16_t);
 };
 
 #endif // ROUTER_H

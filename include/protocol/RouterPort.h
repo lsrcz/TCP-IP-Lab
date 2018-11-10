@@ -10,6 +10,7 @@
 #include <protocol/RouterNeighbor.h>
 #include <vector>
 
+class Router;
 class RouterNeighbor;
 class RouterPort {
 public:
@@ -22,6 +23,7 @@ public:
         DROTHER
     };
 private:
+    Router& router;
     STATE portState;
 
     int device;
@@ -52,7 +54,7 @@ private:
     void resetDevice();
     void printRouterStatus();
  public:
-    RouterPort();
+    RouterPort(Router& router);
     int startDevice(int id);
     int sendHelloPacket();
     int recvHelloPacket(const void* packet, int len);
@@ -60,7 +62,9 @@ private:
     void removeNeighbor(in_addr ip);
     void addTask(std::function<void(void)> func);
     std::set<IP> getNeighborInformation() const;
-    int sendLinkStatePacket(const std::vector<IP>&vec);
+    int sendLinkStatePacket(const std::vector<IP>&, const std::vector<uint16_t>&);
+    IP getIP();
+    std::set<uint16_t> getNeighborRID();
 };
 
 #endif // ROUTER_PORT_H

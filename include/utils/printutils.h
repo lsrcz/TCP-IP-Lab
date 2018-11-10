@@ -38,35 +38,37 @@ void printRoutePacket(const void* buf, int len) {
     printf("\n");
     if (hdr->type == HELLO) {
         printf("type: HELLO\n");
-        int list_len = (htonl16(hdr->len) - HELLO_HEADER_LEN) / 4;
-        in_addr* ip_list = (in_addr*)(((HelloPacket*)hdr) + 1);
+        int list_len = (htonl16(hdr->len) - HELLO_HEADER_LEN) / 6;
+        helloNeighborInformation* n_list = (helloNeighborInformation*)(((HelloPacket*)hdr) + 1);
+        printf("router ID: %d\n", htonl16(hdr->rid));
         printf("list len: %d\n", list_len);
         printf("list: \n");
         for (int i = 0; i < list_len; ++i) {
-            printf("  ");
-            printIP(ip_list + i);
+            printf("  ip: ");
+            printIP(n_list + i);
+            printf("  router ID: %d", htonl16(n_list[i].rid));
             printf("\n");
         }
     } else if (hdr->type == LINKSTATE) {
         printf("type: LINKSTATE\n");
         LinkstatePacket* packet = (LinkstatePacket*)hdr;
-        int list_len = (htonl16(hdr->len) - LINKSTATE_HEADER_LEN) / 8;
-        IP* ip_list = (IP*)(packet + 1);
-        printf("node ip: ");
-        printIP(&packet->ip);
-        printf("\n");
-        printf("node subnet mask: ");
-        printIP(&packet->subnet_mask);
-        printf("\n");
-        printf("timestamp: %u\n", htonl32(packet->timestamp));
-        printf("list len: %d\n", list_len);
-        printf("list: \n");
-        for (int i = 0; i < list_len; ++i) {
+        IP* port_list = (IP*)(packet + 1);
+        printf("rid: %u\n", htonl16(packet->rid));
+        printf("timestamp: %u\n", htonl16(packet->timestamp));
+        printf("port list len: %d\n", htonl16(packet->nop));
+        printf("port list: \n");
+        for (int i = 0; i < htonl16(packet->nop); ++i) {
             printf("  ");
-            printIP(ip_list + i);
+            printIP(port_list + i);
             printf("/");
-            printIP(((in_addr*)(ip_list + i)) + 1);
+            printIP(((in_addr*)(port_list + i)) + 1);
             printf("\n");
+        }
+        printf("neighbor list len: %d\n", htonl16(packet->non));
+        printf("neighbor list: \n");
+        uint16_t* neighbor_list = (uint16_t*)(port_list + htonl16(packet->nop));
+        for (int i = 0; i < htonl16(packet->non); ++i) {
+            printf("  %d\n", neighbor_list[i]);
         }
     }
 }
@@ -96,7 +98,7 @@ void printIPPacket(const void* buf, int len) {
 
 inline
 void printIncomingFrame(const void* buf, int len) {
-    printf("Incoming frame received\n");
+    printf("-------- Incoming frame received --------\n");
     printf("length: %d\n", len);
     printf("dest MAC: ");
     printMAC(buf);

@@ -34,14 +34,23 @@ const in_addr Router::allip = std::invoke([](){
     });
 
 int Router::addDevice(int dev) {
+    if (!rid) {
+        ErrorBehavior eb("Router not initialized", false, true);
+        ERROR_WITH_BEHAVIOR(eb, return -1);
+    }
     std::unique_lock<std::shared_mutex> lock(mu);
+    auto iter = devs.find(dev);
     if (devs.find(dev) != devs.end())
         return 0;
     char buf[200];
     snprintf(buf, 200, "Trying to add the device to router %d", dev);
     LOG(INFO, buf);
     ErrorBehavior eb("Failed to add device to the router", false, true);
-    if (devs[dev].startDevice(dev) < 0) {
+    auto itert = devs.try_emplace(dev, *this);
+    if (!itert.second) {
+        ERROR_WITH_BEHAVIOR(eb, return -1);
+    }
+    if (itert.first->second.startDevice(dev) < 0) {
         auto iter = devs.find(dev);
         if (iter == devs.end()) {
             devs.erase(iter);
@@ -53,6 +62,10 @@ int Router::addDevice(int dev) {
 }
 
 int Router::controlPacketRecv(const void* buf, int len, int id) {
+    if (!rid) {
+        ErrorBehavior eb("Router not initialized", false, true);
+        ERROR_WITH_BEHAVIOR(eb, return -1);
+    }
     std::shared_lock<std::shared_mutex> lock(mu);
     ErrorBehavior eb("", false, true);
     auto iter = devs.find(id);
@@ -97,15 +110,28 @@ int Router::controlPacketRecv(const void* buf, int len, int id) {
 }
 
 int Router::sendLinkStatePacket() {
+    if (!rid) {
+        ErrorBehavior eb("Router not initialized", false, true);
+        ERROR_WITH_BEHAVIOR(eb, return -1);
+    }
     std::unique_lock<std::shared_mutex> lock(mu);
     std::vector<IP> vec;
     for (auto &d: devs) {
-        for (const auto&i: d.second.getNeighborInformation()) {
-            vec.push_back(i);
+        vec.push_back(d.second.getIP());
+    }
+    std::set<uint16_t> s;
+    for (auto &d: devs) {
+        for (uint16_t n: d.second.getNeighborRID()) {
+            s.insert(n);
         }
     }
+    std::vector<uint16_t> v;
+    for (uint16_t n: s) {
+        v.push_back(n);
+    }
+
     for (auto &d: devs) {
-        if (d.second.sendLinkStatePacket(vec) < 0) {
+        if (d.second.sendLinkStatePacket(vec, v) < 0) {
             char buf[200];
             snprintf(buf, 200, "Error sending link state packet on device %d", d.first);
             ErrorBehavior eb(buf,false,false);
@@ -131,4 +157,15 @@ Router::~Router() {
         Pthread_cancel(p);
         linkstateThread.join();
     }
+}
+
+uint16_t Router::getRID() {
+    if (rid)
+        return *rid;
+    else
+        return 0xffff;
+}
+
+void Router::setRID(uint16_t rid) {
+    this->rid = std::make_unique<uint16_t>(rid);
 }

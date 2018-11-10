@@ -3,7 +3,7 @@
 #include <string>
 #include <utils/printutils.h>
 
-RouterNeighbor::RouterNeighbor(in_addr ip) : ip(ip) {
+RouterNeighbor::RouterNeighbor(uint16_t rid, in_addr ip) : rid(rid), ip(ip) {
     in_addr zip;
     memset(&zip, 0, sizeof(zip));
     dr = bdr = zip;
@@ -46,13 +46,14 @@ bool RouterNeighbor::operator==(const RouterNeighbor& rhs) const {
 }
 
 RouterNeighbor::RouterNeighbor(RouterNeighbor&& rhs)
-    : ip(rhs.ip), dr(rhs.dr), bdr(rhs.bdr), state(rhs.state),
+    : rid(rhs.rid), ip(rhs.ip), dr(rhs.dr), bdr(rhs.bdr), state(rhs.state),
       timeout(std::move(rhs.timeout)), isSelf(rhs.isSelf) {
 }
 
 RouterNeighbor& RouterNeighbor::operator=(RouterNeighbor&& rhs) {
     if (this == &rhs)
         return *this;
+    rid = rhs.rid;
     ip = rhs.ip;
     dr = rhs.dr;
     bdr = rhs.bdr;
