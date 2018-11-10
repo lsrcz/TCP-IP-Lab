@@ -6,22 +6,27 @@
 
 void testHuffman() {
     Huffman h;
-    in_addr a,b,c,d,sa,sb,sc,sd;
-    inet_aton("0.0.0.0", &a);
-    inet_aton("0.0.0.0", &b);
-    inet_aton("0.0.0.0", &c);
-    inet_aton("0.0.0.0", &d);
+    in_addr a,b,c,d,e,sa,sb,sc,sd,se;
+    inet_aton("192.192.34.0", &a);
+    inet_aton("192.192.34.0", &b);
+    inet_aton("192.192.34.0", &c);
+    inet_aton("192.192.34.0", &d);
+    inet_aton("192.192.34.1", &e);
     inet_aton("255.0.0.0", &sa);
     inet_aton("255.128.0.0", &sb);
     inet_aton("255.192.0.0", &sc);
     inet_aton("255.224.0.0", &sd);
+    inet_aton("255.255.255.255", &se);
     GENIP(a);
     GENIP(b);
     GENIP(c);
     GENIP(d);
+    GENIP(e);
     h.insert(ib, 2);
     h.printTree();
     h.insert(ic, 3);
+    h.printTree();
+    h.insert(ie,4);
     h.printTree();
     printf("%d\n", h.query(ia));
     printf("%d\n", h.query(ib));
@@ -30,7 +35,8 @@ void testHuffman() {
 }
 
 void testRouterTable() {
-    RouterTable t(4);
+    RouterTable t;
+    t.setStart(4);
     in_addr a,aa,b,c,d,e,g,sa,saa,sb,sc,sd,se,sg;
     inet_aton("0.0.0.0", &a);
     inet_aton("0.0.0.6", &aa);
@@ -83,9 +89,9 @@ void testRouterTable() {
     t.update(gr);
     t.update(ggr);
     t.update(gggr);
-    t.updateStartPoint(0,std::vector<uint16_t>({2}));
-    t.updateStartPoint(1,std::vector<uint16_t>({3}));
-    t.updateStartPoint(2,std::vector<uint16_t>({5}));
+    t.updateStartPoint(0,std::set<uint16_t>({2}));
+    t.updateStartPoint(1,std::set<uint16_t>({3}));
+    t.updateStartPoint(2,std::set<uint16_t>({5}));
     printf("%d\n", t.query(ia));
     printf("%d\n", t.query(ib));
     printf("%d\n", t.query(ic));

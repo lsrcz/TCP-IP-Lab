@@ -6,6 +6,7 @@
 #include <utils/netutils.h>
 #include <map>
 #include <set>
+#include <shared_mutex>
 
 struct RouterInfo {
     uint16_t rid;
@@ -25,7 +26,7 @@ struct HuffmanNode {
 
 class Huffman {
     std::shared_ptr<HuffmanNode> root;
-    void printTreeInternal(std::shared_ptr<HuffmanNode> r, std::string s);
+    void printTreeInternal(std::shared_ptr<HuffmanNode> r, uint32_t t, int depth);
  public:
     Huffman();
     void insert(IP ip, int dev);
@@ -35,17 +36,20 @@ class Huffman {
 
 
 class RouterTable {
-    int start;
+    int start = -1;
     std::map<uint16_t, RouterInfo> graph;
-    std::map<int, std::vector<uint16_t>> startpoint;
+    std::map<int, std::set<uint16_t>> startpoint;
     Huffman tree;
-    void recomputeDijkstra();
     std::shared_mutex mu;
  public:
-    RouterTable(int);
+    void printRouterTable();
+    void printGraph();
+    void setStart(int self);
     int update(const RouterInfo&);
-    void updateStartPoint(int, const std::vector<uint16_t>& neighborVec);
+    void updateStartPoint(int, const std::set<uint16_t>& neighborVec);
     int query(IP ip);
+    void recomputeDijkstra();
+    bool isNewer(uint16_t rid, uint32_t timestamp);
 };
 
 
