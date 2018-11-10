@@ -76,9 +76,11 @@ struct helloNeighborInformation {
 /**
  * linkstate packet
  * +------------+------------+------------+------------+
- * |        router ID        |        timestamp        |
+ * |        router ID        |         padding         |
  * +------------+------------+------------+------------+
  * |      num of ports       |     num of neighbors    |
+ * +------------+------------+------------+------------+
+ * |                     timestamp                     |
  * +------------+------------+------------+------------+
  * |                 port information                  |
  * +--                                               --+
@@ -109,12 +111,13 @@ struct helloNeighborInformation {
 struct LinkstatePacket {
     RouterHeader hdr;
     uint16_t rid;
-    uint16_t timestamp;
+    uint16_t padding;
     uint16_t nop;
     uint16_t non;
+    uint32_t timestamp;
 };
 
-#define LINKSTATE_HEADER_LEN 24
+#define LINKSTATE_HEADER_LEN 28
 static_assert(sizeof(LinkstatePacket) == LINKSTATE_HEADER_LEN, "Linkstate packet length mismatch");
 static_assert(std::is_standard_layout_v<LinkstatePacket>, "Linkstate Packet is not in standard layout");
 

@@ -11,13 +11,11 @@ struct RouterInfo {
     uint16_t rid;
     std::vector<IP> portInfo;
     std::vector<uint16_t> neighborRouter;
+    uint32_t timestamp;
     RouterInfo(uint16_t rid, const std::vector<IP>& portInfo,
-               const std::vector<uint16_t>& neighborRouter);
-    RouterInfo(const RouterInfo& ri) {
-        rid = ri.rid;
-        portInfo = ri.portInfo;
-        neighborRouter = ri.neighborRouter;
-    }
+               const std::vector<uint16_t>& neighborRouter, uint32_t timestamp);
+    RouterInfo(const RouterInfo& ri);
+    RouterInfo& operator=(const RouterInfo& ri);
 };
 
 struct HuffmanNode {
@@ -42,9 +40,10 @@ class RouterTable {
     std::map<int, std::vector<uint16_t>> startpoint;
     Huffman tree;
     void recomputeDijkstra();
+    std::shared_mutex mu;
  public:
     RouterTable(int);
-    void update(const RouterInfo&);
+    int update(const RouterInfo&);
     void updateStartPoint(int, const std::vector<uint16_t>& neighborVec);
     int query(IP ip);
 };

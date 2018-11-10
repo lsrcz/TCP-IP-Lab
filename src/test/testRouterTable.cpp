@@ -67,18 +67,22 @@ void testRouterTable() {
     std::vector<IP> gv;
     gv.push_back(ig);
 
-    RouterInfo ar = RouterInfo(0, av, std::vector<uint16_t>({1,2}));
-    RouterInfo br = RouterInfo(1, bv, std::vector<uint16_t>({0,3,5}));
-    RouterInfo cr = RouterInfo(2, cv, std::vector<uint16_t>({0,4}));
-    RouterInfo dr = RouterInfo(3, dv, std::vector<uint16_t>({1,4}));
-    RouterInfo er = RouterInfo(4, ev, std::vector<uint16_t>({2,3,5}));
-    RouterInfo gr = RouterInfo(5, gv, std::vector<uint16_t>({1,4}));
+    RouterInfo ar = RouterInfo(0, av, std::vector<uint16_t>({1,2}),1000);
+    RouterInfo br = RouterInfo(1, bv, std::vector<uint16_t>({0,3,5}),1000);
+    RouterInfo cr = RouterInfo(2, cv, std::vector<uint16_t>({0,4}),1000);
+    RouterInfo dr = RouterInfo(3, dv, std::vector<uint16_t>({1,4}),1000);
+    RouterInfo er = RouterInfo(4, ev, std::vector<uint16_t>({2,3,5}),1000);
+    RouterInfo gr = RouterInfo(5, gv, std::vector<uint16_t>({1,4}),1000);
+    RouterInfo ggr = RouterInfo(5, gv, std::vector<uint16_t>({1,4}),998);
+    RouterInfo gggr = RouterInfo(5, gv, std::vector<uint16_t>(),1002);
     t.update(ar);
     t.update(br);
     t.update(cr);
     t.update(dr);
     t.update(er);
     t.update(gr);
+    t.update(ggr);
+    t.update(gggr);
     t.updateStartPoint(0,std::vector<uint16_t>({2}));
     t.updateStartPoint(1,std::vector<uint16_t>({3}));
     t.updateStartPoint(2,std::vector<uint16_t>({5}));

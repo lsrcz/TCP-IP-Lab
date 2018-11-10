@@ -6,8 +6,23 @@
 #include <utils/printutils.h>
 
 RouterInfo::RouterInfo(uint16_t rid, const std::vector<IP>& portInfo,
-                       const std::vector<uint16_t>& neighborRouter)
-    : rid(rid), portInfo(portInfo), neighborRouter(neighborRouter) {}
+                       const std::vector<uint16_t>& neighborRouter, uint32_t timestamp)
+    : rid(rid), portInfo(portInfo), neighborRouter(neighborRouter), timestamp(timestamp) {}
+
+RouterInfo::RouterInfo(const RouterInfo& ri) {
+    rid = ri.rid;
+    portInfo = ri.portInfo;
+    neighborRouter = ri.neighborRouter;
+    timestamp = ri.timestamp;
+}
+
+RouterInfo& RouterInfo::operator=(const RouterInfo& ri) {
+    rid = ri.rid;
+    portInfo = ri.portInfo;
+    neighborRouter = ri.neighborRouter;
+    timestamp = ri.timestamp;
+    return *this;
+}
 
 Huffman::Huffman() {
     root = std::make_shared<HuffmanNode>();
@@ -82,12 +97,24 @@ void Huffman::printTree() {
     printTreeInternal(root, "");
 }
 
-void RouterTable::update(const RouterInfo& ri) {
+int RouterTable::update(const RouterInfo& ri) {
+    std::unique_lock<std::shared_mutex> lock(mu);
+    auto iter = graph.find(ri.rid);
+    if (iter != graph.end()) {
+        if (iter->second.timestamp - ri.timestamp < 40000) {
+            LOG(INFO, "Ignore old packet");
+            return -1;
+        }
+        iter->second.timestamp = ri.timestamp;
+        return 0;
+    }
     graph.try_emplace(ri.rid, ri);
     recomputeDijkstra();
+    return 0;
 }
 
 void RouterTable::updateStartPoint(int port, const std::vector<uint16_t>& neighborVec) {
+    std::unique_lock<std::shared_mutex> lock(mu);
     startpoint[port] = neighborVec;
     recomputeDijkstra();
 }
@@ -120,6 +147,7 @@ void RouterTable::recomputeDijkstra() {
 }
 
 int RouterTable::query(IP ip) {
+    std::shared_lock<std::shared_mutex> lock(mu);
     return tree.query(ip);
 }
 
