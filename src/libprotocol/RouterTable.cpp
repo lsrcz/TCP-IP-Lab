@@ -80,21 +80,21 @@ int Huffman::query(IP ip) {
     return next_hop;
 }
 
-void Huffman::printTreeInternal(std::shared_ptr<HuffmanNode> r, std::string s) {
+void Huffman::printTreeInternal(std::shared_ptr<HuffmanNode> r, uint32_t t, int depth) {
     if (r->nexthop_dev) {
-        printf("%s: %d\n", s.c_str(), *(r->nexthop_dev));
+        in_addr ip;
+        ip.s_addr = htonl32(t << (32 - depth));
+        printf("%s/%d: %d\n", inet_ntoa(ip), depth, *(r->nexthop_dev));
     }
     for (int i = 0; i < 2; ++i) {
         if (r->child[i]) {
-            s.push_back(i + '0');
-            printTreeInternal(r->child[i], s);
-            s.pop_back();
+            printTreeInternal(r->child[i], t * 2 + i, depth + 1);
         }
     }
 }
 
 void Huffman::printTree() {
-    printTreeInternal(root, "");
+    printTreeInternal(root, 0, 0);
 }
 
 int RouterTable::update(const RouterInfo& ri) {
@@ -105,21 +105,29 @@ int RouterTable::update(const RouterInfo& ri) {
             LOG(INFO, "Ignore old packet");
             return -1;
         }
-        iter->second.timestamp = ri.timestamp;
+        LOG(DEBUG, "Update");
+        iter->second = ri;
         return 0;
     }
+    LOG(DEBUG, "Update");
     graph.try_emplace(ri.rid, ri);
-    recomputeDijkstra();
+    if (start != -1)
+        recomputeDijkstra();
     return 0;
 }
 
-void RouterTable::updateStartPoint(int port, const std::vector<uint16_t>& neighborVec) {
+void RouterTable::updateStartPoint(int port, const std::set<uint16_t>& neighborVec) {
     std::unique_lock<std::shared_mutex> lock(mu);
     startpoint[port] = neighborVec;
-    recomputeDijkstra();
+    if (start != -1)
+        recomputeDijkstra();
 }
 
 void RouterTable::recomputeDijkstra() {
+    if (start == -1) {
+        LOG(WARNING, "RID not set");
+        return;
+    }
     tree = Huffman();
     std::set<uint16_t> visited;
     visited.insert(start);
@@ -137,7 +145,9 @@ void RouterTable::recomputeDijkstra() {
         }
         visited.insert(router);
         auto iter = graph.find(router);
-        for (IP i: iter->second.portInfo) {
+        if (iter == graph.end())
+            continue;
+        for (const IP& i: iter->second.portInfo) {
             tree.insert(i, port);
         }
         for (uint16_t n: iter->second.neighborRouter) {
@@ -148,9 +158,54 @@ void RouterTable::recomputeDijkstra() {
 
 int RouterTable::query(IP ip) {
     std::shared_lock<std::shared_mutex> lock(mu);
+    if (start == -1)
+        return -1;
     return tree.query(ip);
 }
 
-RouterTable::RouterTable(int self) {
+void RouterTable::setStart(int self) {
+    std::shared_lock<std::shared_mutex> lock(mu);
     start = self;
+}
+
+bool RouterTable::isNewer(uint16_t rid, uint32_t timestamp) {
+    std::shared_lock<std::shared_mutex> lock(mu);
+    auto iter = graph.find(rid);
+    if (iter == graph.end())
+        return true;
+    return iter->second.timestamp - timestamp >= 40000;
+}
+
+void RouterTable::printRouterTable() {
+    std::shared_lock<std::shared_mutex> lock(mu);
+    printf("-------- routing table ---------\n");
+    tree.printTree();
+    printf("----- end of routing table -----\n");
+}
+
+void RouterTable::printGraph() {
+    std::shared_lock<std::shared_mutex> lock(mu);
+    printf("------------- graph -------------\n");
+    printf("startpoint:\n");
+    for (const auto& x: startpoint) {
+        printf("  device: %d\n", x.first);
+        printf("    adjwith:\n");
+        for (uint16_t y: x.second) {
+            printf("      %d\n", y);
+        }
+    }
+    printf("nodes:\n");
+    for (const auto& x: graph) {
+        printf("  router ID: %d\n", x.first);
+        printf("    ip:\n");
+        for (const auto& y: x.second.portInfo) {
+            printIP(&y);
+            printf("\n");
+        }
+        printf("    adjwith:\n");
+        for (const auto& y: x.second.neighborRouter) {
+            printf("      %d\n", y);
+        }
+    }
+    printf("---------- end of graph ---------\n");
 }
