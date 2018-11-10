@@ -58,7 +58,7 @@ void printRoutePacket(const void* buf, int len) {
         printf("node subnet mask: ");
         printIP(&packet->subnet_mask);
         printf("\n");
-        printf("timestamp: %d\n", htonl32(packet->timestamp));
+        printf("timestamp: %u\n", htonl32(packet->timestamp));
         printf("list len: %d\n", list_len);
         printf("list: \n");
         for (int i = 0; i < list_len; ++i) {
