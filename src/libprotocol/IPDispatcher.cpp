@@ -12,14 +12,13 @@ void IPPacketDispatcher::addIPPacketDispatcher(uint8_t protocol, IPPacketReceive
 }
 
 int IPPacketDispatcher::processPacket(const void* packet, int len, int id) {
-    LOG(DEBUG, "Packet received");
     std::shared_lock<std::shared_mutex> lock(mu);
     char buf[200];
     struct ip* hdr = (struct ip*)packet;
     in_addr dest = hdr->ip_dst;
     int packet_len = htonl16(hdr->ip_len);
     int header_len = hdr->ip_hl * 4;
-    if (dest.s_addr == router.drip.s_addr || dest.s_addr == router.allip.s_addr) {
+    if (dest.s_addr == router.drip.s_addr || dest.s_addr == router.allip.s_addr || hdr->ip_p == 254) {
         // TODO: forward to router
         char buf[200];
         snprintf(buf, 200, "Router control packet received on %d", id);
