@@ -7,6 +7,7 @@
 #include <mutex>
 #include <thread>
 #include <condition_variable>
+#include <protocol/RouterTable.h>
 
 class Router {
     std::map<int, RouterPort> devs;
@@ -15,6 +16,7 @@ class Router {
     std::thread linkstateThread;
     std::mutex lsmu;
     std::condition_variable lscv;
+    RouterTable tbl;
  public:
     Router();
     ~Router();
@@ -22,6 +24,7 @@ class Router {
     static const in_addr allip;
     int addDevice(int dev);
     int controlPacketRecv(const void* buf, int len, int id);
+    int linkstatePacketRecv(const void* buf, int len, int id);
     int sendLinkStatePacket();
     uint16_t getRID();
     void setRID(uint16_t);

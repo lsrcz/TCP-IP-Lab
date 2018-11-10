@@ -62,6 +62,7 @@ int Router::addDevice(int dev) {
 }
 
 int Router::controlPacketRecv(const void* buf, int len, int id) {
+    LOG(DEBUG, "Control packet");
     if (!rid) {
         ErrorBehavior eb("Router not initialized", false, true);
         ERROR_WITH_BEHAVIOR(eb, return -1);
@@ -101,15 +102,79 @@ int Router::controlPacketRecv(const void* buf, int len, int id) {
     LOG(DEBUG, errbuf);
     // should be well-formed
     if (header->type == HELLO) {
-        return port.recvHelloPacket(buf, len);
-    } else  {
-        eb.msg = "Not implemented error";
-        ERROR_WITH_BEHAVIOR(eb, return -1);
+        if (port.recvHelloPacket(buf, len) < 0) {
+            return -1;
+        }
+        for (auto x: port.getNeighborRID()) {
+            printf("rid: %d\n", x);
+        }
+        tbl.updateStartPoint(id, port.getNeighborRID());
+    } else {
+        return linkstatePacketRecv(buf, len, id);
     }
     return 0;
 }
 
+int Router::linkstatePacketRecv(const void* buf, int len, int id) {
+    LOG(INFO, "Link state packet received");
+    const ip* ipheader = (const ip*)buf;
+    int ip_header_len = ipheader->ip_hl * 4;
+    const RouterHeader *rtheader = (const RouterHeader*)(((uint8_t*)buf) + ip_header_len);
+    const LinkstatePacket *lkheader = (const LinkstatePacket*)rtheader;
+    uint16_t rid = htonl16(lkheader->rid);
+    uint16_t nop = htonl16(lkheader->nop);
+    uint16_t non = htonl16(lkheader->non);
+    uint32_t timestamp = htonl32(lkheader->timestamp);
+
+    IP* portList = (IP*)(lkheader + 1);
+    uint16_t* neighborList = (uint16_t*)(portList + nop);
+
+    printf("Before\n");
+    tbl.printRouterTable();
+    tbl.printGraph();
+    if (!tbl.isNewer(rid, timestamp)) {
+        LOG(INFO, "Ignore old packet");
+        return 0;
+    }
+
+    std::vector<IP> portInfo(portList, portList + nop);
+    std::vector<uint16_t> neighborInfo(neighborList, neighborList + non);
+    for (auto i: portInfo) {
+        printIP(&i.ip);
+        printf("/");
+        printIP(&i.subnet_mask);
+        printf("\n\n");
+    }
+    for (auto i: neighborInfo) {
+        printf("%d\n", i);
+    }
+    RouterInfo ri(rid, portInfo, neighborInfo, timestamp);
+    tbl.update(ri);
+    printf("After\n");
+    tbl.printRouterTable();
+    tbl.printGraph();
+
+    for (auto& d: devs) {
+        if (d.first != id) {
+            IP i = d.second.getIP();
+            len = htonl16(rtheader->len);
+            uint8_t buf[len];
+            RouterHeader *rh = (RouterHeader*)buf;
+            memcpy(buf, rh, len);
+            rh->ip = i.ip;
+            rh->subnetMask = i.subnet_mask;
+            rh->checksum = 0;
+            rh->rid = htonl16(rid);
+            rh->checksum = htonl16(chksum((uint8_t*)rh, len));
+            sendIPPacket(d.second.getIP().ip, allip, ROUTER_PROTO_NUM, lkheader, len);
+        }
+    }
+
+    return 0;
+}
+
 int Router::sendLinkStatePacket() {
+    LOG(INFO, "Trying to send link state packet");
     if (!rid) {
         ErrorBehavior eb("Router not initialized", false, true);
         ERROR_WITH_BEHAVIOR(eb, return -1);
@@ -138,6 +203,7 @@ int Router::sendLinkStatePacket() {
             ERROR_WITH_BEHAVIOR(eb,return -1;);
         }
     }
+    LOG(INFO, "Link state packet sent");
     return 0;
 }
 
@@ -145,7 +211,7 @@ Router::Router() {
     linkstateThread = std::thread( [&]() {
             std::unique_lock<std::mutex> lock(lsmu);
             while (true) {
-                lscv.wait_for(lock, std::chrono::seconds(5));
+                lscv.wait_for(lock, std::chrono::seconds(20));
                 this->sendLinkStatePacket();
             }
         });
@@ -167,5 +233,6 @@ uint16_t Router::getRID() {
 }
 
 void Router::setRID(uint16_t rid) {
+    tbl.setStart(rid);
     this->rid = std::make_unique<uint16_t>(rid);
 }

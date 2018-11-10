@@ -191,7 +191,7 @@ int RouterPort::startDevice(int id) {
 }
 
 int RouterPort::sendHelloPacket() {
-    LOG(DEBUG, "Trying to send hello packet");
+    LOG(INFO, "Trying to send hello packet");
     if (portState == UNINITIALIZED) {
         LOG(ERROR, "Port unintialized");
         return -1;
@@ -217,7 +217,6 @@ int RouterPort::sendHelloPacket() {
     helloNeighborInformation *neighbor_info = (helloNeighborInformation*)(buf + HELLO_HEADER_LEN);
     for (auto const& n: neighborTable) {
         neighbor_info[i].ip = n.ip;
-        printf("%d\n", n.rid);
         neighbor_info[i].rid = htonl16(n.rid);
         ++i;
     }
@@ -225,7 +224,7 @@ int RouterPort::sendHelloPacket() {
     memcpy(buf, &hdr, ROUTER_HEADER_LEN);
     char errbuf[200];
     snprintf(errbuf, 200, "Neighbor table size: %ld, len: %d", neighborTable.size(), len);
-    LOG(DEBUG, errbuf);
+    LOG(INFO, errbuf);
     return sendIPPacket(hdr.ip, dest, ROUTER_PROTO_NUM, buf, len);
 }
 
@@ -240,6 +239,7 @@ int RouterPort::recvHelloPacket(const void* packet, int len) {
     uint16_t hellopacketLen = htonl16(header->len);
     uint16_t numOfList = (hellopacketLen - HELLO_HEADER_LEN) / 6;
     helloNeighborInformation* neighborListHello = (helloNeighborInformation*)(((uint8_t*)header) + HELLO_HEADER_LEN);
+    LOG(INFO, "Hello packet received");
     if (header->subnetMask.s_addr != portIP.subnet_mask.s_addr) {
         char buf[200];
         snprintf(buf, 200, "Hello packet for different subnet on %d", device);
@@ -341,9 +341,10 @@ int RouterPort::sendLinkStatePacket(const std::vector<IP>&portInfo, const std::v
     hdr.subnetMask = portIP.subnet_mask;
     hdr.checksum = 0;
     lp.rid = htonl16(router.getRID());
-    lp.timestamp = htonl16((uint16_t)getTimeStamp());
+    lp.timestamp = htonl32((uint32_t)getTimeStamp());
     lp.nop = htonl16((uint16_t)portInfo.size());
     lp.non = htonl16((uint16_t)neighborInfo.size());
+    printf("nop: %ld, non: %ld\n", portInfo.size(), neighborInfo.size());
 
     uint8_t buf[len];
     memcpy(buf, &lp, LINKSTATE_HEADER_LEN);
@@ -360,14 +361,9 @@ int RouterPort::sendLinkStatePacket(const std::vector<IP>&portInfo, const std::v
       else
       inet_aton("224.0.0.120", &dest);
       }*/
-    {
-        std::shared_lock<std::shared_mutex> lock(ntmu);
-        for (const auto&n : neighborTable) {
-            if (n.isSelf)
-                continue;
-            sendIPPacket(hdr.ip, n.ip, ROUTER_PROTO_NUM, buf, len);
-        }
-    }
+    in_addr dest;
+    inet_aton("224.0.0.120", &dest);
+    sendIPPacket(hdr.ip, dest, ROUTER_PROTO_NUM, buf, len);
     return 0;
 }
 
