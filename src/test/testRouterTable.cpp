@@ -9,9 +9,9 @@ void testHuffman() {
     in_addr a,b,c,d,e,sa,sb,sc,sd,se;
     inet_aton("192.192.34.0", &a);
     inet_aton("192.192.34.0", &b);
-    inet_aton("192.192.34.0", &c);
-    inet_aton("192.192.34.0", &d);
-    inet_aton("192.192.34.1", &e);
+    inet_aton("192.64.34.0", &c);
+    inet_aton("192.64.34.1", &d);
+    inet_aton("192.64.34.2", &e);
     inet_aton("255.0.0.0", &sa);
     inet_aton("255.128.0.0", &sb);
     inet_aton("255.192.0.0", &sc);
@@ -22,16 +22,24 @@ void testHuffman() {
     GENIP(c);
     GENIP(d);
     GENIP(e);
-    h.insert(ib, 2);
+    h.insert(ib, b,2);
     h.printTree();
-    h.insert(ic, 3);
+    h.insert(ic, c,3);
     h.printTree();
-    h.insert(ie,4);
+    h.insert(ie,e,4);
     h.printTree();
-    printf("%d\n", h.query(ia));
-    printf("%d\n", h.query(ib));
-    printf("%d\n", h.query(ic));
-    printf("%d\n", h.query(id));
+    in_addr x;
+    int p;
+    p = h.query(a, &x);
+    printf("%d,%s\n", p, inet_ntoa(x));
+    p = h.query(b, &x);
+    printf("%d,%s\n", p, inet_ntoa(x));
+    p = h.query(c, &x);
+    printf("%d,%s\n", p, inet_ntoa(x));
+    p = h.query(d, &x);
+    printf("%d,%s\n", p, inet_ntoa(x));
+    p = h.query(e, &x);
+    printf("%d,%s\n", p, inet_ntoa(x));
 }
 
 void testRouterTable() {
@@ -89,15 +97,27 @@ void testRouterTable() {
     t.update(gr);
     t.update(ggr);
     t.update(gggr);
-    t.updateStartPoint(0,std::set<uint16_t>({2}));
-    t.updateStartPoint(1,std::set<uint16_t>({3}));
-    t.updateStartPoint(2,std::set<uint16_t>({5}));
-    printf("%d\n", t.query(ia));
-    printf("%d\n", t.query(ib));
-    printf("%d\n", t.query(ic));
-    printf("%d\n", t.query(id));
-    printf("%d\n", t.query(ie));
-    printf("%d\n", t.query(ig));
+    std::pair<uint16_t, in_addr> y = std::make_pair(2, c);
+    t.updateStartPoint(2,std::set<std::pair<uint16_t, in_addr>>({y}));
+    y = std::make_pair(3, d);
+    t.updateStartPoint(3,std::set<std::pair<uint16_t, in_addr>>({y}));
+    y = std::make_pair(5, g);
+    t.updateStartPoint(5,std::set<std::pair<uint16_t, in_addr>>({y}));
+    in_addr x;
+    int p;
+    p = t.query(a, &x);
+    printf("%d,%s\n", p, inet_ntoa(x));
+    p = t.query(b, &x);
+    printf("%d,%s\n", p, inet_ntoa(x));
+    p = t.query(c, &x);
+    printf("%d,%s\n", p, inet_ntoa(x));
+    p = t.query(d, &x);
+    printf("%d,%s\n", p, inet_ntoa(x));
+    p = t.query(e, &x);
+    printf("%d,%s\n", p, inet_ntoa(x));
+    p = t.query(g, &x);
+    printf("%d,%s\n", p, inet_ntoa(x));
+    t.printRouterTable();
 }
 int main() {
     testHuffman();

@@ -21,7 +21,8 @@ struct RouterInfo {
 
 struct HuffmanNode {
     std::shared_ptr<HuffmanNode> child[2];
-    std::unique_ptr<int> nexthop_dev;
+    std::unique_ptr<in_addr> nexthop;
+    std::unique_ptr<int> port;
 };
 
 class Huffman {
@@ -29,8 +30,8 @@ class Huffman {
     void printTreeInternal(std::shared_ptr<HuffmanNode> r, uint32_t t, int depth);
  public:
     Huffman();
-    void insert(IP ip, int dev);
-    int query(IP ip);
+    void insert(IP ip, in_addr nexthop, int port);
+    int query(in_addr ip, in_addr *nexthop);
     void printTree();
 };
 
@@ -38,7 +39,7 @@ class Huffman {
 class RouterTable {
     int start = -1;
     std::map<uint16_t, RouterInfo> graph;
-    std::map<int, std::set<uint16_t>> startpoint;
+    std::map<int, std::set<std::pair<uint16_t, in_addr>>> startpoint;
     Huffman tree;
     std::shared_mutex mu;
  public:
@@ -46,8 +47,8 @@ class RouterTable {
     void printGraph();
     void setStart(int self);
     int update(const RouterInfo&);
-    void updateStartPoint(int, const std::set<uint16_t>& neighborVec);
-    int query(IP ip);
+    void updateStartPoint(int, const std::set<std::pair<uint16_t, in_addr>>& neighborVec);
+    int query(in_addr ip, in_addr* nexthop);
     void recomputeDijkstra();
     bool isNewer(uint16_t rid, uint32_t timestamp);
 };
