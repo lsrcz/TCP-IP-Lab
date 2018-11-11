@@ -18,31 +18,23 @@ int IPPacketDispatcher::processPacket(const void* packet, int len, int id) {
     in_addr dest = hdr->ip_dst;
     int packet_len = htonl16(hdr->ip_len);
     int header_len = hdr->ip_hl * 4;
+    if (chksum((uint8_t*)hdr, header_len) != 0) {
+        ErrorBehavior eb("Wrong ip packet checksum", false, true);
+        ERROR_WITH_BEHAVIOR(eb, return -1);
+    }
     if (dest.s_addr == router.drip.s_addr || dest.s_addr == router.allip.s_addr || hdr->ip_p == 254) {
-        // TODO: forward to router
         char buf[200];
-        snprintf(buf, 200, "Router control packet received on %d", id);
-        LOG(DEBUG, buf);
         return router.controlPacketRecv(packet, packet_len, id);
     } else if (isLocalIP(dest)) {
-        // local processing
         uint8_t ip_proto = hdr->ip_p;
         if (callbacks.find(ip_proto) == callbacks.end()) {
             return -2;
         }
-        return (*(callbacks.find(ip_proto))->second)((uint8_t*)packet + header_len, packet_len - header_len, id);
+        return (*(callbacks.find(ip_proto))->second)((uint8_t*)packet + header_len, packet_len - header_len);
     } else {
-        // TODO: forward to router
+        return router.otherPacketRecv(packet, packet_len, id);
     }
     return 0;
-}
-
-int IPPacketDispatcher::addRouterDev(int dev) {
-    return router.addDevice(dev);
-}
-
-void IPPacketDispatcher::setRouterRID(uint16_t rid) {
-    router.setRID(rid);
 }
 
 IPPacketDispatcher IPpd;
@@ -53,12 +45,4 @@ void addIPPacketDispatcher(uint8_t protocol, IPPacketReceiveCallback c) {
 
 int defaultIPPacketReceiveCallback(const void* packet, int len, int id) {
     return IPpd.processPacket(packet, len, id);
-}
-
-int addRouterDev(int dev) {
-    return IPpd.addRouterDev(dev);
-}
-
-void setRouterRID(uint16_t rid) {
-    IPpd.setRouterRID(rid);
 }
