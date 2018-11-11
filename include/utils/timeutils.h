@@ -5,6 +5,8 @@
 #include <ctime>
 #include <thread>
 #include <functional>
+#include <mutex>
+#include <condition_variable>
 
 inline
 uint64_t getTimeStamp() {
@@ -40,10 +42,15 @@ class Timer {
     void setTimer(const std::chrono::duration<Rep, Period>& timer_duration,
                   std::function<void(void)> callback) {
         cancelTimer();
-        timer_thread = std::thread([&timer_duration, callback = std::move(callback)]() {
-                std::this_thread::sleep_for(timer_duration);
-                std::invoke(callback);
-                });
+        timer_thread = std::thread([timer_duration=timer_duration,
+                                    callback = std::move(callback)]() {
+                                       std::mutex mu;
+                                       std::condition_variable cv;
+                                       std::unique_lock<std::mutex> lock(mu);
+                                       if (cv.wait_for(lock, timer_duration) == std::cv_status::timeout) {
+                                           std::invoke(callback);
+                                       }
+                                   });
     }
     template<class Rep, class Period>
     inline
@@ -51,12 +58,17 @@ class Timer {
                         std::function<void(void)> callback) {
         cancelTimer();
         this->callback = callback;
-        timer_thread = std::thread([&timer_duration, this]() {
-                while(true) {
-                    std::this_thread::sleep_for(timer_duration);
-                    std::invoke(this->callback);
-                }
-            });
+        timer_thread = std::thread([timer_duration=timer_duration,
+                                    callback=std::move(callback)]() {
+                                       std::mutex mu;
+                                       std::condition_variable cv;
+                                       std::unique_lock<std::mutex> lock(mu);
+                                       while(true) {
+                                           if (cv.wait_for(lock, timer_duration) == std::cv_status::timeout) {
+                                               std::invoke(callback);
+                                           }
+                                       }
+                                   });
     }
     inline
     void cancelTimer() {
