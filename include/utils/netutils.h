@@ -147,5 +147,13 @@ uint16_t chksum(uint8_t* ptr, int len) {
     return ~cksum;
 }
 
+inline
+bool operator<(const in_addr a, const in_addr b) {
+    return a.s_addr < b.s_addr;
+}
 
+inline
+bool operator==(const in_addr a, const in_addr b) {
+    return a.s_addr == b.s_addr;
+}
 #endif // NETUTILS_H
