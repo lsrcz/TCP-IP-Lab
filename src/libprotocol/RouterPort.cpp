@@ -200,7 +200,7 @@ int RouterPort::sendHelloPacket() {
     hdr.type = HELLO;
     hdr.checksum = 0;
     if (hdr.setIPByID(device) < 0) {
-        LOG(ERROR, "Can get IP");
+        LOG(ERROR, "Cannot get IP");
         return -1;
     }
     in_addr dest;
@@ -311,11 +311,13 @@ RouterPort::STATE RouterPort::getState() {
 }
 
 void RouterPort::removeNeighbor(in_addr ip) {
-    std::unique_lock<std::shared_mutex> ntmu;
+    std::unique_lock<std::shared_mutex> lock(ntmu);
     RouterNeighbor n(0,ip);
     auto iter = neighborTable.find(n);
     if (iter != neighborTable.end()) {
         neighborTable.erase(iter);
+        lock.unlock();
+        router.tbl.updateStartPoint(device, getNeighborRIDIP());
     }
 }
 
@@ -344,7 +346,6 @@ int RouterPort::sendLinkStatePacket(const std::vector<IP>&portInfo, const std::v
     lp.timestamp = htonl32((uint32_t)getTimeStamp());
     lp.nop = htonl16((uint16_t)portInfo.size());
     lp.non = htonl16((uint16_t)neighborInfo.size());
-    printf("nop: %ld, non: %ld\n", portInfo.size(), neighborInfo.size());
 
     uint8_t buf[len];
     memcpy(buf, &lp, LINKSTATE_HEADER_LEN);
@@ -376,6 +377,15 @@ std::set<uint16_t> RouterPort::getNeighborRID() {
     std::shared_lock<std::shared_mutex> lock(ntmu);
     for (auto &n:neighborTable) {
         ret.insert(n.rid);
+    }
+    return ret;
+}
+
+std::set<std::pair<uint16_t, in_addr>> RouterPort::getNeighborRIDIP() {
+    std::set<std::pair<uint16_t, in_addr>> ret;
+    std::shared_lock<std::shared_mutex> lock(ntmu);
+    for (auto &n:neighborTable) {
+        ret.insert(std::make_pair(n.rid, n.ip));
     }
     return ret;
 }

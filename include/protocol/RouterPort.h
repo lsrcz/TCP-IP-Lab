@@ -65,6 +65,7 @@ private:
     int sendLinkStatePacket(const std::vector<IP>&, const std::vector<uint16_t>&);
     IP getIP();
     std::set<uint16_t> getNeighborRID();
+    std::set<std::pair<uint16_t, in_addr>> getNeighborRIDIP();
 };
 
 #endif // ROUTER_PORT_H

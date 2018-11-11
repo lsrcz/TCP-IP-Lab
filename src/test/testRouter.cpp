@@ -6,13 +6,17 @@
 
 int main(int argc, char*argv[]) {
     initProtocol();
-    if (addInterfaceWithIP(argv[1], argv[2], "255.255.255.0") < 0) {
-        return -1;
-    }
     int rid;
-    sscanf(argv[3], "%d", &rid);
+    sscanf(argv[1], "%d", &rid);
     setRouterRID(rid);
-    addRouterDev(0);
-
-    sleep(200);
+    for (int i = 0; i * 2 + 2 < argc; ++i) {
+        int dev;
+        if ((dev = addInterfaceWithIP(argv[2 + i * 2], argv[3 + i * 2], "255.255.255.0")) < 0) {
+            return -1;
+        }
+        addRouterDev(dev);
+    }
+    while (true) {
+        sleep(100);
+    }
 }

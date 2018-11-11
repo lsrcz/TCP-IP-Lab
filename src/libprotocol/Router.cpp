@@ -14,6 +14,8 @@
 #include <condition_variable>
 #include <deque>
 #include <wrapper/pthread.h>
+#include <protocol/arp.h>
+#include <protocol/packetio.h>
 
 const in_addr Router::drip = std::invoke([](){
         in_addr ret;
@@ -62,7 +64,6 @@ int Router::addDevice(int dev) {
 }
 
 int Router::controlPacketRecv(const void* buf, int len, int id) {
-    LOG(DEBUG, "Control packet");
     if (!rid) {
         ErrorBehavior eb("Router not initialized", false, true);
         ERROR_WITH_BEHAVIOR(eb, return -1);
@@ -98,17 +99,12 @@ int Router::controlPacketRecv(const void* buf, int len, int id) {
         eb.msg = "Wrong route control packet checksum";
         ERROR_WITH_BEHAVIOR(eb, return -1);
     }
-    snprintf(errbuf, 200, "Control packet header verified on %d", id);
-    LOG(DEBUG, errbuf);
     // should be well-formed
     if (header->type == HELLO) {
         if (port.recvHelloPacket(buf, len) < 0) {
             return -1;
         }
-        for (auto x: port.getNeighborRID()) {
-            printf("rid: %d\n", x);
-        }
-        tbl.updateStartPoint(id, port.getNeighborRID());
+        tbl.updateStartPoint(id, port.getNeighborRIDIP());
     } else {
         return linkstatePacketRecv(buf, len, id);
     }
@@ -129,9 +125,6 @@ int Router::linkstatePacketRecv(const void* buf, int len, int id) {
     IP* portList = (IP*)(lkheader + 1);
     uint16_t* neighborList = (uint16_t*)(portList + nop);
 
-    printf("Before\n");
-    tbl.printRouterTable();
-    tbl.printGraph();
     if (!tbl.isNewer(rid, timestamp)) {
         LOG(INFO, "Ignore old packet");
         return 0;
@@ -139,20 +132,8 @@ int Router::linkstatePacketRecv(const void* buf, int len, int id) {
 
     std::vector<IP> portInfo(portList, portList + nop);
     std::vector<uint16_t> neighborInfo(neighborList, neighborList + non);
-    for (auto i: portInfo) {
-        printIP(&i.ip);
-        printf("/");
-        printIP(&i.subnet_mask);
-        printf("\n\n");
-    }
-    for (auto i: neighborInfo) {
-        printf("%d\n", i);
-    }
     RouterInfo ri(rid, portInfo, neighborInfo, timestamp);
     tbl.update(ri);
-    printf("After\n");
-    tbl.printRouterTable();
-    tbl.printGraph();
 
     for (auto& d: devs) {
         if (d.first != id) {
@@ -186,7 +167,7 @@ int Router::sendLinkStatePacket() {
     }
     std::set<uint16_t> s;
     for (auto &d: devs) {
-        for (uint16_t n: d.second.getNeighborRID()) {
+        for (auto n: d.second.getNeighborRID()) {
             s.insert(n);
         }
     }
@@ -235,4 +216,46 @@ uint16_t Router::getRID() {
 void Router::setRID(uint16_t rid) {
     tbl.setStart(rid);
     this->rid = std::make_unique<uint16_t>(rid);
+}
+
+int Router::otherPacketRecv(const void* buf, int len, int id) {
+    char errbuf[200];
+    const ip* ipheader = (const ip*)buf;
+    int ip_header_len = ipheader->ip_hl * 4;
+    in_addr dest;
+    int p = tbl.query(ipheader->ip_dst, &dest);
+    if (p == -1) {
+        snprintf(errbuf, 200, "No route to %s", inet_ntoa(ipheader->ip_dst));
+        LOG(WARNING, errbuf);
+        return -1;
+    }
+    uint8_t* newbuf[len];
+    memcpy(newbuf, buf, len);
+    ip* newipheader = (ip*)newbuf;
+    
+    newipheader->ip_ttl -= 1;
+    newipheader->ip_sum = 0;
+    newipheader->ip_sum = htonl16(chksum((uint8_t*)newbuf, 20));
+
+    MAC mac;
+    if (request_arp(dest, &mac) < 0) {
+        ErrorBehavior eb("", false, true);
+        eb.msg = "Can't get MAC address";
+        ERROR_WITH_BEHAVIOR(eb, return -1);
+    }
+    return sendFrame(newbuf, len, ETHERTYPE_IP, &mac, p);
+}
+
+int Router::query(in_addr ip, in_addr* nexthop) {
+    return tbl.query(ip, nexthop);
+}
+
+Router router;
+
+int addRouterDev(int dev) {
+    return router.addDevice(dev);
+}
+
+void setRouterRID(uint16_t rid) {
+    router.setRID(rid);
 }
