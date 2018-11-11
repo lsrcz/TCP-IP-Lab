@@ -36,7 +36,7 @@ int sendIPPacket(const struct in_addr src, const struct in_addr dest,
  * @return 0 on success, -1 on error.
  * @see addDevice
  */
-typedef int (*IPPacketReceiveCallback)(const void* buf, int len, int id);
+typedef int (*IPPacketReceiveCallback)(const void* buf, int len);
 
 /**
  * @brief Register a callback function to be called each time an IP packet

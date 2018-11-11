@@ -10,6 +10,7 @@
 #include <arpa/inet.h>
 #include <shared_mutex>
 #include <protocol/arp.h>
+#include <protocol/Router.h>
 
 std::map<int, IP> ip_map;
 std::map<in_addr_t, int> ip_map_inv;
@@ -76,6 +77,17 @@ int getIPDevice(const in_addr ip) {
     return iter->second;
 }
 
+int getIPMask(const in_addr ip, in_addr* subnet_mask) {
+    int device = getIPDevice(ip);
+    if (device < 0)
+        return -1;
+    IP allip;
+    if (getDeviceIP(device, &allip) < 0)
+        return -1;
+    *subnet_mask = allip.subnet_mask;
+    return 0;
+}
+
 bool isLocalIP(const in_addr src) {
     std::shared_lock<std::shared_mutex> lock(ipmu);
     for (auto i: ip_map_inv) {
@@ -134,9 +146,28 @@ int sendIPPacket(const struct in_addr src, const struct in_addr dest,
         mac[2] = 0xC2;
         mac[3] &= 0x7f;
     } else {
-        if (request_arp(dest, mac) < 0) {
-            eb.msg = "Can't get MAC address";
+        in_addr subnet_mask;
+        if (getIPMask(src, &subnet_mask) < 0) {
+            std::string msg = std::string("No submask found with ip address ") + inet_ntoa(src);
+            eb.msg = msg.c_str();
             ERROR_WITH_BEHAVIOR(eb, return -1);
+        }
+        if ((src.s_addr & subnet_mask.s_addr) == (dest.s_addr & subnet_mask.s_addr)) {
+            if (request_arp(dest, mac) < 0) {
+                eb.msg = "Can't get MAC address in the same subnet";
+                ERROR_WITH_BEHAVIOR(eb, return -1);
+            }
+        } else {
+            in_addr nexthop;
+            if (router.query(dest, &nexthop) < 0) {
+                std::string msg = std::string("No route to ip address ") + inet_ntoa(dest);
+                eb.msg = msg.c_str();
+                ERROR_WITH_BEHAVIOR(eb, return -1);
+            }
+            if (request_arp(nexthop, mac) < 0) {
+                eb.msg = "Can't get MAC address for the router";
+                ERROR_WITH_BEHAVIOR(eb, return -1);
+            }
         }
     }
     return sendFrame(ipbuf, len + 20, ETHERTYPE_IP, mac, id);
