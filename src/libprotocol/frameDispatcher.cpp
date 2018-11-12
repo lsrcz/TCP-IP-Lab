@@ -12,7 +12,6 @@ void FrameDispatcher::addFrameDispatcher(uint16_t protocol, frameReceiveCallback
     callbacks[protocol] = c;
 }
 int FrameDispatcher::processFrame(const void* frame, int len, int id) {
-    LOG(DEBUG, "Frame received");
     std::shared_lock<std::shared_mutex> lock(mu);
 
     int ok = 1;
@@ -42,7 +41,6 @@ int FrameDispatcher::processFrame(const void* frame, int len, int id) {
     if (ok == 0) {
         return -1;
     }
-    LOG(DEBUG, "Frame verified");
 
     char buf[200];
     if (len >= ETHER_MAX_LEN)
