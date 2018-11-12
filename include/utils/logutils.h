@@ -43,7 +43,7 @@ static std::string getTime() {
 
 inline 
 void logPrint(LogLevel lv, std::string str) {
-    printf("\033[%sm[%-8s %s]\033[0m  %s\n", color[lv].c_str(), header[lv].c_str(),
+    fprintf(stderr, "\033[%sm[%-8s %s]\033[0m  %s\n", color[lv].c_str(), header[lv].c_str(),
            getTime().c_str(), str.c_str());
 }
 
