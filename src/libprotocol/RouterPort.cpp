@@ -58,8 +58,9 @@ void RouterPort::initHelloThread() {
     helloThread = std::thread( [&]() {
             std::unique_lock<std::mutex> lock(hlmu);
             while (true) {
-                hlcv.wait_for(hlmu, std::chrono::seconds(10));
-                this->sendHelloPacket();
+                if (hlcv.wait_for(hlmu, std::chrono::seconds(10)) == std::cv_status::timeout) {
+                    this->sendHelloPacket();
+                }
             }
         });
 }
