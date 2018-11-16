@@ -1,39 +1,39 @@
-#include <protocol/Router.h>
 #include <arpa/inet.h>
-#include <cstdint>
-#include <utils/netutils.h>
-#include <utils/timeutils.h>
-#include <utils/errorutils.h>
-#include <utils/threadsafeQueue.h>
-#include <protocol/ip.h>
-#include <protocol/RouterProtocol.h>
-#include <map>
-#include <set>
-#include <mutex>
-#include <shared_mutex>
 #include <condition_variable>
+#include <cstdint>
 #include <deque>
-#include <wrapper/pthread.h>
+#include <map>
+#include <mutex>
+#include <protocol/Router.h>
+#include <protocol/RouterProtocol.h>
 #include <protocol/arp.h>
+#include <protocol/ip.h>
 #include <protocol/packetio.h>
+#include <set>
+#include <shared_mutex>
+#include <utils/errorutils.h>
+#include <utils/netutils.h>
+#include <utils/threadsafeQueue.h>
+#include <utils/timeutils.h>
+#include <wrapper/pthread.h>
 
-const in_addr Router::drip = std::invoke([](){
-        in_addr ret;
-        if (inet_aton("224.0.0.121", &ret) < -1) {
-            printf("This should not happen");
-            exit(-1);
-        }
-        return ret;
-    });
+const in_addr Router::drip = std::invoke([]() {
+    in_addr ret;
+    if (inet_aton("224.0.0.121", &ret) < -1) {
+        printf("This should not happen");
+        exit(-1);
+    }
+    return ret;
+});
 
-const in_addr Router::allip = std::invoke([](){
-        in_addr ret;
-        if (inet_aton("224.0.0.120", &ret) < -1) {
-            printf("This should not happen");
-            exit(-1);
-        }
-        return ret;
-    });
+const in_addr Router::allip = std::invoke([]() {
+    in_addr ret;
+    if (inet_aton("224.0.0.120", &ret) < -1) {
+        printf("This should not happen");
+        exit(-1);
+    }
+    return ret;
+});
 
 int Router::addDevice(int dev) {
     if (!rid) {
@@ -41,14 +41,14 @@ int Router::addDevice(int dev) {
         ERROR_WITH_BEHAVIOR(eb, return -1);
     }
     std::unique_lock<std::shared_mutex> lock(mu);
-    auto iter = devs.find(dev);
+    auto                                iter = devs.find(dev);
     if (devs.find(dev) != devs.end())
         return 0;
     char buf[200];
     snprintf(buf, 200, "Trying to add the device to router %d", dev);
     LOG(INFO, buf);
     ErrorBehavior eb("Failed to add device to the router", false, true);
-    auto itert = devs.try_emplace(dev, *this);
+    auto          itert = devs.try_emplace(dev, *this);
     if (!itert.second) {
         ERROR_WITH_BEHAVIOR(eb, return -1);
     }
@@ -69,11 +69,12 @@ int Router::controlPacketRecv(const void* buf, int len, int id) {
         ERROR_WITH_BEHAVIOR(eb, return -1);
     }
     std::shared_lock<std::shared_mutex> lock(mu);
-    ErrorBehavior eb("", false, true);
-    auto iter = devs.find(id);
-    char errbuf[200];
+    ErrorBehavior                       eb("", false, true);
+    auto                                iter = devs.find(id);
+    char                                errbuf[200];
     if (iter == devs.end()) {
-        snprintf(errbuf, 200, "Device %d is not connected to a port of the router", id);
+        snprintf(errbuf, 200,
+                 "Device %d is not connected to a port of the router", id);
         eb.msg = errbuf;
         ERROR_WITH_BEHAVIOR(eb, return -1);
     }
@@ -87,9 +88,10 @@ int Router::controlPacketRecv(const void* buf, int len, int id) {
         eb.msg = "Broken route control packet";
         ERROR_WITH_BEHAVIOR(eb, return -1);
     }
-    const ip* iphdr = (const ip*)buf;
-    int ip_header_len = iphdr->ip_hl * 4;
-    const RouterHeader *header = (const RouterHeader*)(((uint8_t*)buf) + ip_header_len);
+    const ip*           iphdr         = (const ip*)buf;
+    int                 ip_header_len = iphdr->ip_hl * 4;
+    const RouterHeader* header =
+        (const RouterHeader*)(((uint8_t*)buf) + ip_header_len);
     uint16_t route_packet_len = htonl16(header->len);
     if (htonl16(header->len) + ip_header_len != len) {
         eb.msg = "Route control packet length error";
@@ -113,16 +115,17 @@ int Router::controlPacketRecv(const void* buf, int len, int id) {
 
 int Router::linkstatePacketRecv(const void* buf, int len, int id) {
     LOG(INFO, "Link state packet received");
-    const ip* ipheader = (const ip*)buf;
-    int ip_header_len = ipheader->ip_hl * 4;
-    const RouterHeader *rtheader = (const RouterHeader*)(((uint8_t*)buf) + ip_header_len);
-    const LinkstatePacket *lkheader = (const LinkstatePacket*)rtheader;
-    uint16_t rid = htonl16(lkheader->rid);
-    uint16_t nop = htonl16(lkheader->nop);
-    uint16_t non = htonl16(lkheader->non);
-    uint32_t timestamp = htonl32(lkheader->timestamp);
+    const ip*           ipheader      = (const ip*)buf;
+    int                 ip_header_len = ipheader->ip_hl * 4;
+    const RouterHeader* rtheader =
+        (const RouterHeader*)(((uint8_t*)buf) + ip_header_len);
+    const LinkstatePacket* lkheader  = (const LinkstatePacket*)rtheader;
+    uint16_t               rid       = htonl16(lkheader->rid);
+    uint16_t               nop       = htonl16(lkheader->nop);
+    uint16_t               non       = htonl16(lkheader->non);
+    uint32_t               timestamp = htonl32(lkheader->timestamp);
 
-    IP* portList = (IP*)(lkheader + 1);
+    IP*       portList     = (IP*)(lkheader + 1);
     uint16_t* neighborList = (uint16_t*)(portList + nop);
 
     if (!tbl.isNewer(rid, timestamp)) {
@@ -130,24 +133,25 @@ int Router::linkstatePacketRecv(const void* buf, int len, int id) {
         return 0;
     }
 
-    std::vector<IP> portInfo(portList, portList + nop);
+    std::vector<IP>       portInfo(portList, portList + nop);
     std::vector<uint16_t> neighborInfo(neighborList, neighborList + non);
-    RouterInfo ri(rid, portInfo, neighborInfo, timestamp);
+    RouterInfo            ri(rid, portInfo, neighborInfo, timestamp);
     tbl.update(ri);
 
-    for (auto& d: devs) {
+    for (auto& d : devs) {
         if (d.first != id) {
             IP i = d.second.getIP();
-            len = htonl16(rtheader->len);
-            uint8_t buf[len];
-            RouterHeader *rh = (RouterHeader*)buf;
+            len  = htonl16(rtheader->len);
+            uint8_t       buf[len];
+            RouterHeader* rh = (RouterHeader*)buf;
             memcpy(buf, rh, len);
-            rh->ip = i.ip;
+            rh->ip         = i.ip;
             rh->subnetMask = i.subnet_mask;
-            rh->checksum = 0;
-            rh->rid = htonl16(rid);
-            rh->checksum = htonl16(chksum((uint8_t*)rh, len));
-            sendIPPacket(d.second.getIP().ip, allip, ROUTER_PROTO_NUM, lkheader, len);
+            rh->checksum   = 0;
+            rh->rid        = htonl16(rid);
+            rh->checksum   = htonl16(chksum((uint8_t*)rh, len));
+            sendIPPacket(d.second.getIP().ip, allip, ROUTER_PROTO_NUM, lkheader,
+                         len);
         }
     }
 
@@ -161,27 +165,28 @@ int Router::sendLinkStatePacket() {
         ERROR_WITH_BEHAVIOR(eb, return -1);
     }
     std::unique_lock<std::shared_mutex> lock(mu);
-    std::vector<IP> vec;
-    for (auto &d: devs) {
+    std::vector<IP>                     vec;
+    for (auto& d : devs) {
         vec.push_back(d.second.getIP());
     }
     std::set<uint16_t> s;
-    for (auto &d: devs) {
-        for (auto n: d.second.getNeighborRID()) {
+    for (auto& d : devs) {
+        for (auto n : d.second.getNeighborRID()) {
             s.insert(n);
         }
     }
     std::vector<uint16_t> v;
-    for (uint16_t n: s) {
+    for (uint16_t n : s) {
         v.push_back(n);
     }
 
-    for (auto &d: devs) {
+    for (auto& d : devs) {
         if (d.second.sendLinkStatePacket(vec, v) < 0) {
             char buf[200];
-            snprintf(buf, 200, "Error sending link state packet on device %d", d.first);
-            ErrorBehavior eb(buf,false,false);
-            ERROR_WITH_BEHAVIOR(eb,return -1;);
+            snprintf(buf, 200, "Error sending link state packet on device %d",
+                     d.first);
+            ErrorBehavior eb(buf, false, false);
+            ERROR_WITH_BEHAVIOR(eb, return -1;);
         }
     }
     LOG(INFO, "Link state packet sent");
@@ -189,13 +194,13 @@ int Router::sendLinkStatePacket() {
 }
 
 Router::Router() {
-    linkstateThread = std::thread( [&]() {
-            std::unique_lock<std::mutex> lock(lsmu);
-            while (true) {
-                lscv.wait_for(lock, std::chrono::seconds(20));
-                this->sendLinkStatePacket();
-            }
-        });
+    linkstateThread = std::thread([&]() {
+        std::unique_lock<std::mutex> lock(lsmu);
+        while (true) {
+            lscv.wait_for(lock, std::chrono::seconds(20));
+            this->sendLinkStatePacket();
+        }
+    });
 }
 
 Router::~Router() {
@@ -219,11 +224,11 @@ void Router::setRID(uint16_t rid) {
 }
 
 int Router::otherPacketRecv(const void* buf, int len, int id) {
-    char errbuf[200];
-    const ip* ipheader = (const ip*)buf;
-    int ip_header_len = ipheader->ip_hl * 4;
-    in_addr dest;
-    int p = tbl.query(ipheader->ip_dst, &dest);
+    char      errbuf[200];
+    const ip* ipheader      = (const ip*)buf;
+    int       ip_header_len = ipheader->ip_hl * 4;
+    in_addr   dest;
+    int       p = tbl.query(ipheader->ip_dst, &dest);
     if (p == -1) {
         snprintf(errbuf, 200, "No route to %s", inet_ntoa(ipheader->ip_dst));
         LOG(WARNING, errbuf);
@@ -232,7 +237,7 @@ int Router::otherPacketRecv(const void* buf, int len, int id) {
     uint8_t* newbuf[len];
     memcpy(newbuf, buf, len);
     ip* newipheader = (ip*)newbuf;
-    
+
     newipheader->ip_ttl -= 1;
     newipheader->ip_sum = 0;
     newipheader->ip_sum = htonl16(chksum((uint8_t*)newbuf, 20));

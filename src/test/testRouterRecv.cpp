@@ -1,8 +1,8 @@
-#include <protocol/api.h>
-#include <protocol/IPDispatcher.h>
-#include <utils/netutils.h>
 #include <map>
+#include <protocol/IPDispatcher.h>
+#include <protocol/api.h>
 #include <string>
+#include <utils/netutils.h>
 
 int receiveIPPacket(const void* frame, int len) {
     printf("len: %d\n", len);
@@ -12,7 +12,7 @@ int receiveIPPacket(const void* frame, int len) {
     return 0;
 }
 
-int main(int argc, char*argv[]) {
+int main(int argc, char* argv[]) {
     initProtocol();
     setRouterRID(4);
     int dev = addInterfaceWithIP("v3ap", "192.168.3.1", "255.255.255.0");

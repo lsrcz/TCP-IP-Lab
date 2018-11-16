@@ -7,7 +7,7 @@ int RouterHeader::setIPByID(int id) {
         ErrorBehavior eb("No device found", false, true);
         ERROR_WITH_BEHAVIOR(eb, return -1);
     }
-    this->ip = ip.ip;
+    this->ip   = ip.ip;
     subnetMask = ip.subnet_mask;
     return 0;
 }

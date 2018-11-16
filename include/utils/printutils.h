@@ -1,11 +1,10 @@
 #ifndef PRINTUTILS_H
 #define PRINTUTILS_H
-#include <protocol/ip.h>
 #include <cstdio>
 #include <protocol/RouterProtocol.h>
+#include <protocol/ip.h>
 
-inline
-void printMAC(const void* buf) {
+inline void printMAC(const void* buf) {
     const uint8_t* macbuf = (const uint8_t*)buf;
     for (int i = 0; i < 6; ++i) {
         if (i != 0)
@@ -14,8 +13,7 @@ void printMAC(const void* buf) {
     }
 }
 
-inline
-void printIP(const void* buf) {
+inline void printIP(const void* buf) {
     const uint8_t* ipbuf = (const uint8_t*)buf;
     for (int i = 0; i < 4; ++i) {
         if (i != 0)
@@ -24,8 +22,7 @@ void printIP(const void* buf) {
     }
 }
 
-inline
-void printRoutePacket(const void* buf, int len) {
+inline void printRoutePacket(const void* buf, int len) {
     printf("type: router\n");
     RouterHeader* hdr = (RouterHeader*)buf;
     printf("real length: %d\n", len);
@@ -39,7 +36,8 @@ void printRoutePacket(const void* buf, int len) {
     if (hdr->type == HELLO) {
         printf("type: HELLO\n");
         int list_len = (htonl16(hdr->len) - HELLO_HEADER_LEN) / 6;
-        helloNeighborInformation* n_list = (helloNeighborInformation*)(((HelloPacket*)hdr) + 1);
+        helloNeighborInformation* n_list =
+            (helloNeighborInformation*)(((HelloPacket*)hdr) + 1);
         printf("router ID: %d\n", htonl16(hdr->rid));
         printf("list len: %d\n", list_len);
         printf("list: \n");
@@ -51,8 +49,8 @@ void printRoutePacket(const void* buf, int len) {
         }
     } else if (hdr->type == LINKSTATE) {
         printf("type: LINKSTATE\n");
-        LinkstatePacket* packet = (LinkstatePacket*)hdr;
-        IP* port_list = (IP*)(packet + 1);
+        LinkstatePacket* packet    = (LinkstatePacket*)hdr;
+        IP*              port_list = (IP*)(packet + 1);
         printf("rid: %u\n", htonl16(packet->rid));
         printf("timestamp: %u\n", htonl16(packet->timestamp));
         printf("port list len: %d\n", htonl16(packet->nop));
@@ -73,12 +71,11 @@ void printRoutePacket(const void* buf, int len) {
     }
 }
 
-inline
-void printIPPacket(const void* buf, int len) {
+inline void printIPPacket(const void* buf, int len) {
     printf("type: IP\n");
-    const ip* hdr = (const ip*)buf;
-    int packet_len = htonl16(hdr->ip_len);
-    int header_len = hdr->ip_hl * 4;
+    const ip* hdr        = (const ip*)buf;
+    int       packet_len = htonl16(hdr->ip_len);
+    int       header_len = hdr->ip_hl * 4;
     printf("real length: %d\n", packet_len);
     printf("length: %d\n", htonl16(((const uint16_t*)buf)[1]));
     printf("src IP: ");
@@ -96,8 +93,7 @@ void printIPPacket(const void* buf, int len) {
     }
 }
 
-inline
-void printIncomingFrame(const void* buf, int len) {
+inline void printIncomingFrame(const void* buf, int len) {
     printf("-------- Incoming frame received --------\n");
     printf("length: %d\n", len);
     printf("dest MAC: ");
@@ -116,5 +112,4 @@ void printIncomingFrame(const void* buf, int len) {
     }
 }
 
-
-#endif // PRINTUTILS_H
+#endif  // PRINTUTILS_H

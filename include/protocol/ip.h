@@ -1,6 +1,6 @@
-/** 
+/**
  * @file ip.h
- * @brief Library supporting sending/receiving IP packets encapsuled in an 
+ * @brief Library supporting sending/receiving IP packets encapsuled in an
  * Ethernet II frame.
  */
 #ifndef IP_H
@@ -9,14 +9,16 @@
 #include <utils/netutils.h>
 #include <utils/printutils.h>
 
-int registerDeviceIP(const int device, const char* ipstr, const char* subnet_mask);
-int registerDeviceIP(const int device, const in_addr ip, const in_addr subnet_mask);
+int  registerDeviceIP(const int device, const char* ipstr,
+                      const char* subnet_mask);
+int  registerDeviceIP(const int device, const in_addr ip,
+                      const in_addr subnet_mask);
 void deleteDeviceIP(const int device);
-int getDeviceIP(const int device, IP* ip);
-int getIPDevice(const in_addr ip);
+int  getDeviceIP(const int device, IP* ip);
+int  getIPDevice(const in_addr ip);
 bool isLocalIP(const in_addr ip);
 /**
- * @brief Send an IP packet to specified host. 
+ * @brief Send an IP packet to specified host.
  *
  * @param src Source IP address.
  * @param dest Destination IP address.
@@ -25,10 +27,10 @@ bool isLocalIP(const in_addr ip);
  * @param len Length of IP payload
  * @return 0 on success, -1 on error.
  */
-int sendIPPacket(const struct in_addr src, const struct in_addr dest, 
-    int proto, const void *buf, int len);
+int sendIPPacket(const struct in_addr src, const struct in_addr dest, int proto,
+                 const void* buf, int len);
 
-/** 
+/**
  * @brief Process a IP packet upon receiving it.
  *
  * @param buf Pointer to the packet.
@@ -49,16 +51,16 @@ typedef int (*IPPacketReceiveCallback)(const void* buf, int len);
 int setIPPacketReceiveCallback(IPPacketReceiveCallback callback);
 
 /**
- * @brief Manully add an item to routing table. Useful when talking with real 
+ * @brief Manully add an item to routing table. Useful when talking with real
  * Linux machines.
- * 
+ *
  * @param dest The destination IP prefix.
  * @param mask The subnet mask of the destination IP prefix.
  * @param nextHopMAC MAC address of the next hop.
  * @param device Name of device to send packets on.
  * @return 0 on success, -1 on error
  */
-int setRoutingTable(const struct in_addr dest, const struct in_addr mask, 
-    const void* nextHopMAC, const char *device);
+int setRoutingTable(const struct in_addr dest, const struct in_addr mask,
+                    const void* nextHopMAC, const char* device);
 
-#endif // IP_H
+#endif  // IP_H

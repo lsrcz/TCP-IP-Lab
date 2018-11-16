@@ -15,11 +15,23 @@ BUILDDIRS = $(patsubst %,$(BUILDDIR)/%,$(SUBBUILDDIR))
 
 BUILDPHASES = libprotocol test app
 
+INCLUDEFILES = $(wildcard include/*/*.h)
+
 all: builddir
 	for d in $(BUILDPHASES) ; do \
 		echo "Making $$d" ; \
 		make -C $(SRCDIR)/$$d ; \
 	done \
+
+clang-format:
+	for d in $(BUILDPHASES) ; do \
+		echo "Formatting $$d" ; \
+		make -C $(SRCDIR)/$$d clang-format ; \
+	done
+	for f in $(INCLUDEFILES) ; do \
+		echo "Formatting $$f" ; \
+	  clang-format -style=file -i $$f ; \
+	done
 
 test: libprotocol
 app: libprotocol

@@ -1,5 +1,5 @@
-#include <protocol/RouterNeighbor.h>
 #include <chrono>
+#include <protocol/RouterNeighbor.h>
 #include <string>
 #include <utils/printutils.h>
 
@@ -7,10 +7,11 @@ RouterNeighbor::RouterNeighbor(uint16_t rid, in_addr ip) : rid(rid), ip(ip) {
     in_addr zip;
     memset(&zip, 0, sizeof(zip));
     dr = bdr = zip;
-    state = ONEWAY;
+    state    = ONEWAY;
 }
 
-int RouterNeighbor::update(RouterPort& rp, const in_addr* dr, const in_addr* bdr, const STATE* st) {
+int RouterNeighbor::update(RouterPort& rp, const in_addr* dr,
+                           const in_addr* bdr, const STATE* st) {
     if (isSelf)
         return 0;
     std::lock_guard<std::mutex> lock(mu);
@@ -24,15 +25,15 @@ int RouterNeighbor::update(RouterPort& rp, const in_addr* dr, const in_addr* bdr
         this->state = *st;
     }
     using namespace std::chrono_literals;
-    std::function<void(void)> task = [&rp=rp, ip=ip](){
-        std::function<void(void)> innertask = [&rp=rp, ip=ip](){
+    std::function<void(void)> task = [& rp = rp, ip = ip]() {
+        std::function<void(void)> innertask = [& rp = rp, ip = ip]() {
             rp.removeNeighbor(ip);
         };
         rp.addTask(std::move(innertask));
     };
-    //std::function<void(void)> task1 = task;
-    //std::invoke(task1);
-    //rp.removeNeighbor(ip);
+    // std::function<void(void)> task1 = task;
+    // std::invoke(task1);
+    // rp.removeNeighbor(ip);
     timeout.setTimer(13s, std::move(task));
     return 0;
 }
@@ -47,19 +48,18 @@ bool RouterNeighbor::operator==(const RouterNeighbor& rhs) const {
 
 RouterNeighbor::RouterNeighbor(RouterNeighbor&& rhs)
     : rid(rhs.rid), ip(rhs.ip), dr(rhs.dr), bdr(rhs.bdr), state(rhs.state),
-      timeout(std::move(rhs.timeout)), isSelf(rhs.isSelf) {
-}
+      timeout(std::move(rhs.timeout)), isSelf(rhs.isSelf) {}
 
 RouterNeighbor& RouterNeighbor::operator=(RouterNeighbor&& rhs) {
     if (this == &rhs)
         return *this;
-    rid = rhs.rid;
-    ip = rhs.ip;
-    dr = rhs.dr;
-    bdr = rhs.bdr;
-    state = rhs.state;
+    rid     = rhs.rid;
+    ip      = rhs.ip;
+    dr      = rhs.dr;
+    bdr     = rhs.bdr;
+    state   = rhs.state;
     timeout = std::move(rhs.timeout);
-    isSelf = rhs.isSelf;
+    isSelf  = rhs.isSelf;
     return *this;
 }
 

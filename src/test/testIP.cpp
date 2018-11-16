@@ -1,10 +1,10 @@
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <protocol/api.h>
 #include <protocol/device.h>
+#include <protocol/frameDispatcher.h>
 #include <protocol/ip.h>
 #include <protocol/packetio.h>
-#include <protocol/frameDispatcher.h>
-#include <protocol/api.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 
 int frame2IP(const void* buf, int len, int id) {
     printf("lenip: %d \n", len);
@@ -41,19 +41,18 @@ int testSendIPMulticast() {
 }
 
 void testRcvIP() {
-    //setFrameReceiveCallback(defaultFrameReceiveCallback);
-    
+    // setFrameReceiveCallback(defaultFrameReceiveCallback);
+
     addFrameDispatcher(ETHERTYPE_IP, frame2IP);
 }
-
 
 int main() {
     initProtocol();
     addInterfaceWithIP("v2p", "172.16.176.1", "255.255.255.0");
-    addInterfaceWithIP("v1p", "172.16.176.203", "255.255.255.0"); 
+    addInterfaceWithIP("v1p", "172.16.176.203", "255.255.255.0");
     addInterfaceWithIP("ens33", "172.16.175.203", "255.255.255.0");
     testSendIPMulticast();
     testRcvIP();
     printf("%d\n", testSendIPPacket());
-    //sleep(100);
+    // sleep(100);
 }

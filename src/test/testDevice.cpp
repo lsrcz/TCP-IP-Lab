@@ -1,16 +1,15 @@
-#include <protocol/device.h>
-#include <pcap/pcap.h>
 #include <cstdio>
-#include <vector>
+#include <pcap/pcap.h>
+#include <protocol/device.h>
 #include <string>
-
+#include <vector>
 
 int testManageDevice() {
     printf("-------- TEST MANAGE DEVICE --------\n\n");
-    char errbuf[PCAP_ERRBUF_SIZE];
-    pcap_if_t *alldevsp;
-    pcap_findalldevs(&alldevsp , errbuf);
-    pcap_if_t *first = alldevsp;
+    char       errbuf[PCAP_ERRBUF_SIZE];
+    pcap_if_t* alldevsp;
+    pcap_findalldevs(&alldevsp, errbuf);
+    pcap_if_t*               first = alldevsp;
     std::vector<std::string> succ;
     while (first != NULL) {
         int t = addDevice(first->name);
@@ -28,7 +27,7 @@ int testManageDevice() {
     }
     pcap_freealldevs(alldevsp);
     int id = 0;
-    for (const std::string&devicename : succ) {
+    for (const std::string& devicename : succ) {
         int fid = findDevice(devicename.c_str());
         if (fid == -1) {
             printf("Error id %d for %s\n", fid, devicename.c_str());
@@ -56,16 +55,20 @@ int testManageDevice() {
             }
             int t = addDevice(succ[1].c_str());
             if (t != -1) {
-                printf("Success to add the device %s, id is %d\n", succ[1].c_str(), t);
+                printf("Success to add the device %s, id is %d\n",
+                       succ[1].c_str(), t);
             } else {
-                printf("Failed to add the device %s, return value is %d\n", succ[1].c_str(), t);
+                printf("Failed to add the device %s, return value is %d\n",
+                       succ[1].c_str(), t);
                 return -1;
             }
             t = addDevice(succ[0].c_str());
             if (t != -1) {
-                printf("Success to add the device %s, id is %d\n", succ[0].c_str(), t);
+                printf("Success to add the device %s, id is %d\n",
+                       succ[0].c_str(), t);
             } else {
-                printf("Failed to add the device %s, return value is %d\n", succ[0].c_str(), t);
+                printf("Failed to add the device %s, return value is %d\n",
+                       succ[0].c_str(), t);
                 return -1;
             }
         }
@@ -81,7 +84,8 @@ int testManageDevice() {
 
     int dd = addDevice(succ[0].c_str());
     if (dd == -1) {
-        printf("Failed to add the device %s, return value is %d\n", succ[0].c_str(), dd);
+        printf("Failed to add the device %s, return value is %d\n",
+               succ[0].c_str(), dd);
         return -1;
     }
     if (removeDevice(succ[0].c_str()) == -1) {
@@ -94,10 +98,10 @@ int testManageDevice() {
 
 int testMac() {
     printf("-------- TEST MAC --------\n\n");
-    char errbuf[PCAP_ERRBUF_SIZE];
-    pcap_if_t *alldevsp;
-    pcap_findalldevs(&alldevsp , errbuf);
-    pcap_if_t *first = alldevsp;
+    char       errbuf[PCAP_ERRBUF_SIZE];
+    pcap_if_t* alldevsp;
+    pcap_findalldevs(&alldevsp, errbuf);
+    pcap_if_t*                               first = alldevsp;
     std::vector<std::pair<int, std::string>> succ;
     while (first != NULL) {
         int t = addDevice(first->name);
@@ -112,8 +116,8 @@ int testMac() {
     }
     pcap_freealldevs(alldevsp);
 
-    unsigned char *buf = (unsigned char*)malloc(6);
-    int oknum = 0;
+    unsigned char* buf   = (unsigned char*)malloc(6);
+    int            oknum = 0;
     for (auto& p : succ) {
         if (getDeviceMAC(p.first, buf) < 0) {
             printf("No MAC address available for %s\n", p.second.c_str());
@@ -133,10 +137,10 @@ int testMac() {
 }
 
 void testRAII() {
-    char errbuf[PCAP_ERRBUF_SIZE];
-    pcap_if_t *alldevsp;
-    pcap_findalldevs(&alldevsp , errbuf);
-    pcap_if_t *first = alldevsp;
+    char       errbuf[PCAP_ERRBUF_SIZE];
+    pcap_if_t* alldevsp;
+    pcap_findalldevs(&alldevsp, errbuf);
+    pcap_if_t* first = alldevsp;
     while (first != NULL) {
         int t = addDevice(first->name);
         first = first->next;

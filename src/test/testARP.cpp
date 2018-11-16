@@ -1,5 +1,5 @@
-#include <protocol/api.h>
 #include <arpa/inet.h>
+#include <protocol/api.h>
 
 int main() {
     initProtocol();
@@ -9,7 +9,7 @@ int main() {
     if (addInterfaceWithIP("ens33", "172.16.175.203", "255.255.255.0") == -1) {
         printf("Should be able to add ens33 with 172.16.175.203\n");
     }
-    int id1 = addInterfaceWithIP("lo", "127.0.0.1", "255.0.0.0");
+    int     id1 = addInterfaceWithIP("lo", "127.0.0.1", "255.0.0.0");
     in_addr ip;
     inet_aton("127.0.0.1", &ip);
     uint8_t buf[6];

@@ -49,4 +49,9 @@ $(DEPS): $(DEPDIR)/%.dep: $(MODSRCDIR)/%.cpp $(DEPDIR)
 clean:
 	$(RM) -f $(OBJS) $(BINS) $(LIBS)
 
-.PHONY: all clean
+clang-format:
+	for f in $(CPPFILES) ; do \
+		clang-format -style=file -i $$f ; \
+	done \
+
+.PHONY: all clean clang-format

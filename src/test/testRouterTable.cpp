@@ -1,12 +1,12 @@
-#include <protocol/RouterTable.h>
-#include <iostream>
 #include <bitset>
+#include <iostream>
+#include <protocol/RouterTable.h>
 
-#define GENIP(a) IP i##a(a,s##a)
+#define GENIP(a) IP i##a(a, s##a)
 
 void testHuffman() {
     Huffman h;
-    in_addr a,b,c,d,e,sa,sb,sc,sd,se;
+    in_addr a, b, c, d, e, sa, sb, sc, sd, se;
     inet_aton("192.192.34.0", &a);
     inet_aton("192.192.34.0", &b);
     inet_aton("192.64.34.0", &c);
@@ -22,14 +22,14 @@ void testHuffman() {
     GENIP(c);
     GENIP(d);
     GENIP(e);
-    h.insert(ib, b,2);
+    h.insert(ib, b, 2);
     h.printTree();
-    h.insert(ic, c,3);
+    h.insert(ic, c, 3);
     h.printTree();
-    h.insert(ie,e,4);
+    h.insert(ie, e, 4);
     h.printTree();
     in_addr x;
-    int p;
+    int     p;
     p = h.query(a, &x);
     printf("%d,%s\n", p, inet_ntoa(x));
     p = h.query(b, &x);
@@ -45,7 +45,7 @@ void testHuffman() {
 void testRouterTable() {
     RouterTable t;
     t.setStart(4);
-    in_addr a,aa,b,c,d,e,g,sa,saa,sb,sc,sd,se,sg;
+    in_addr a, aa, b, c, d, e, g, sa, saa, sb, sc, sd, se, sg;
     inet_aton("0.0.0.0", &a);
     inet_aton("0.0.0.6", &aa);
     inet_aton("0.0.0.1", &b);
@@ -81,14 +81,14 @@ void testRouterTable() {
     std::vector<IP> gv;
     gv.push_back(ig);
 
-    RouterInfo ar = RouterInfo(0, av, std::vector<uint16_t>({1,2}),1000);
-    RouterInfo br = RouterInfo(1, bv, std::vector<uint16_t>({0,3,5}),1000);
-    RouterInfo cr = RouterInfo(2, cv, std::vector<uint16_t>({0,4}),1000);
-    RouterInfo dr = RouterInfo(3, dv, std::vector<uint16_t>({1,4}),1000);
-    RouterInfo er = RouterInfo(4, ev, std::vector<uint16_t>({2,3,5}),1000);
-    RouterInfo gr = RouterInfo(5, gv, std::vector<uint16_t>({1,4}),1000);
-    RouterInfo ggr = RouterInfo(5, gv, std::vector<uint16_t>({1,4}),998);
-    RouterInfo gggr = RouterInfo(5, gv, std::vector<uint16_t>(),1002);
+    RouterInfo ar = RouterInfo(0, av, std::vector<uint16_t>({ 1, 2 }), 1000);
+    RouterInfo br = RouterInfo(1, bv, std::vector<uint16_t>({ 0, 3, 5 }), 1000);
+    RouterInfo cr = RouterInfo(2, cv, std::vector<uint16_t>({ 0, 4 }), 1000);
+    RouterInfo dr = RouterInfo(3, dv, std::vector<uint16_t>({ 1, 4 }), 1000);
+    RouterInfo er = RouterInfo(4, ev, std::vector<uint16_t>({ 2, 3, 5 }), 1000);
+    RouterInfo gr = RouterInfo(5, gv, std::vector<uint16_t>({ 1, 4 }), 1000);
+    RouterInfo ggr  = RouterInfo(5, gv, std::vector<uint16_t>({ 1, 4 }), 998);
+    RouterInfo gggr = RouterInfo(5, gv, std::vector<uint16_t>(), 1002);
     t.update(ar);
     t.update(br);
     t.update(cr);
@@ -98,13 +98,13 @@ void testRouterTable() {
     t.update(ggr);
     t.update(gggr);
     std::pair<uint16_t, in_addr> y = std::make_pair(2, c);
-    t.updateStartPoint(2,std::set<std::pair<uint16_t, in_addr>>({y}));
+    t.updateStartPoint(2, std::set<std::pair<uint16_t, in_addr>>({ y }));
     y = std::make_pair(3, d);
-    t.updateStartPoint(3,std::set<std::pair<uint16_t, in_addr>>({y}));
+    t.updateStartPoint(3, std::set<std::pair<uint16_t, in_addr>>({ y }));
     y = std::make_pair(5, g);
-    t.updateStartPoint(5,std::set<std::pair<uint16_t, in_addr>>({y}));
+    t.updateStartPoint(5, std::set<std::pair<uint16_t, in_addr>>({ y }));
     in_addr x;
-    int p;
+    int     p;
     p = t.query(a, &x);
     printf("%d,%s\n", p, inet_ntoa(x));
     p = t.query(b, &x);
@@ -123,4 +123,3 @@ int main() {
     testHuffman();
     testRouterTable();
 }
-

@@ -1,12 +1,12 @@
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <net/ethernet.h>
 #include <protocol/device.h>
 #include <protocol/packetio.h>
-#include <net/ethernet.h>
 #include <utils/netutils.h>
-#include <cstring>
-#include <cstdlib>
-#include <cstdint>
 
-/** 
+/**
  * @brief Encapsule some data into an Ethernet II frame and send it.
  *
  * @param buf Pointer to the payload.
@@ -17,8 +17,8 @@
  * @return 0 on success, -1 on error.
  * @see addDevice
  */
-int sendFrame(const void* buf, int len, 
-              int ethtype, const void* destmac, int id) {
+int sendFrame(const void* buf, int len, int ethtype, const void* destmac,
+              int id) {
     if (len + ETHER_HDR_LEN > ETH_FRAME_LEN) {
         LOG(ERROR, "Invalid packet length");
         return -1;
@@ -33,15 +33,16 @@ int sendFrame(const void* buf, int len,
     eh.ether_type = htonl16((uint16_t)ethtype);
     memcpy(framebuf, &eh, ETHER_HDR_LEN);
     memcpy(framebuf + ETHER_HDR_LEN, buf, len);
-    return sendPacketOnDevice(id, framebuf, std::max(ETH_ZLEN, len + ETHER_HDR_LEN));
+    return sendPacketOnDevice(id, framebuf,
+                              std::max(ETH_ZLEN, len + ETHER_HDR_LEN));
 }
 
-/** 
+/**
  * @brief Process a frame upon receiving it.
  *
  * @param buf Pointer to the frame.
  * @param len Length of the frame.
- * @param id ID of the device(returned by `addDevice`) receiving current 
+ * @param id ID of the device(returned by `addDevice`) receiving current
  * frame.
  * @return 0 on success, -1 on error.
  * @see addDevice
@@ -49,10 +50,10 @@ int sendFrame(const void* buf, int len,
 typedef int (*frameReceiveCallback)(const void*, int, int);
 
 frameReceiveCallback frCallback = NULL;
-std::shared_mutex muFrCallback;
+std::shared_mutex    muFrCallback;
 
 /**
- * @brief Register a callback function to be called each time an Ethernet II 
+ * @brief Register a callback function to be called each time an Ethernet II
  * frame was received.
  *
  * @param callback The callback function.
@@ -64,4 +65,3 @@ int setFrameReceiveCallback(frameReceiveCallback callback) {
     frCallback = callback;
     return 0;
 }
-

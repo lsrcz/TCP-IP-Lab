@@ -1,26 +1,28 @@
-#include <protocol/RouterTable.h>
 #include <bitset>
-#include <iostream>
 #include <deque>
+#include <iostream>
+#include <protocol/RouterTable.h>
 #include <set>
 #include <utils/printutils.h>
 
 RouterInfo::RouterInfo(uint16_t rid, const std::vector<IP>& portInfo,
-                       const std::vector<uint16_t>& neighborRouter, uint32_t timestamp)
-    : rid(rid), portInfo(portInfo), neighborRouter(neighborRouter), timestamp(timestamp) {}
+                       const std::vector<uint16_t>& neighborRouter,
+                       uint32_t                     timestamp)
+    : rid(rid), portInfo(portInfo), neighborRouter(neighborRouter),
+      timestamp(timestamp) {}
 
 RouterInfo::RouterInfo(const RouterInfo& ri) {
-    rid = ri.rid;
-    portInfo = ri.portInfo;
+    rid            = ri.rid;
+    portInfo       = ri.portInfo;
     neighborRouter = ri.neighborRouter;
-    timestamp = ri.timestamp;
+    timestamp      = ri.timestamp;
 }
 
 RouterInfo& RouterInfo::operator=(const RouterInfo& ri) {
-    rid = ri.rid;
-    portInfo = ri.portInfo;
+    rid            = ri.rid;
+    portInfo       = ri.portInfo;
     neighborRouter = ri.neighborRouter;
-    timestamp = ri.timestamp;
+    timestamp      = ri.timestamp;
     return *this;
 }
 
@@ -31,7 +33,7 @@ Huffman::Huffman() {
 void Huffman::insert(IP ip, in_addr nexthop, int port) {
     std::bitset<32> ipst(htonl32(ip.ip.s_addr));
     std::bitset<32> smst(htonl32(ip.subnet_mask.s_addr));
-    auto ptr = root;
+    auto            ptr = root;
     for (int i = 31; i >= 0; --i) {
         if (smst.test(i)) {
             if (ipst.test(i)) {
@@ -47,18 +49,18 @@ void Huffman::insert(IP ip, in_addr nexthop, int port) {
             }
         } else {
             ptr->nexthop = std::make_unique<in_addr>(nexthop);
-            ptr->port = std::make_unique<int> (port);
+            ptr->port    = std::make_unique<int>(port);
             return;
         }
     }
     ptr->nexthop = std::make_unique<in_addr>(nexthop);
-    ptr->port = std::make_unique<int>(port);
+    ptr->port    = std::make_unique<int>(port);
 }
 
-int Huffman::query(in_addr ip, in_addr *nexthop) {
+int Huffman::query(in_addr ip, in_addr* nexthop) {
     std::bitset<32> ipst(htonl32(ip.s_addr));
-    int port = -1;
-    auto ptr = root;
+    int             port = -1;
+    auto            ptr  = root;
     for (int i = 31; i >= 0; --i) {
         if (ipst.test(i)) {
             if (!ptr->child[1]) {
@@ -73,17 +75,19 @@ int Huffman::query(in_addr ip, in_addr *nexthop) {
         }
         if (ptr->nexthop) {
             *nexthop = *(ptr->nexthop);
-            port = *(ptr->port);
+            port     = *(ptr->port);
         }
     }
     return port;
 }
 
-void Huffman::printTreeInternal(std::shared_ptr<HuffmanNode> r, uint32_t t, int depth) {
+void Huffman::printTreeInternal(std::shared_ptr<HuffmanNode> r, uint32_t t,
+                                int depth) {
     if (r->nexthop) {
         in_addr ip;
         ip.s_addr = htonl32(t << (32 - depth));
-        printf("%s/%d: dev %d nexthop %s\n", inet_ntoa(ip), depth, *(r->port), inet_ntoa(*(r->nexthop)));
+        printf("%s/%d: dev %d nexthop %s\n", inet_ntoa(ip), depth, *(r->port),
+               inet_ntoa(*(r->nexthop)));
     }
     for (int i = 0; i < 2; ++i) {
         if (r->child[i]) {
@@ -98,7 +102,7 @@ void Huffman::printTree() {
 
 int RouterTable::update(const RouterInfo& ri) {
     std::unique_lock<std::shared_mutex> lock(mu);
-    auto iter = graph.find(ri.rid);
+    auto                                iter = graph.find(ri.rid);
     if (iter != graph.end()) {
         if (iter->second.timestamp - ri.timestamp < 40000) {
             LOG(INFO, "Ignore old packet");
@@ -113,7 +117,8 @@ int RouterTable::update(const RouterInfo& ri) {
     return 0;
 }
 
-void RouterTable::updateStartPoint(int port, const std::set<std::pair<uint16_t, in_addr>>& neighborVec) {
+void RouterTable::updateStartPoint(
+    int port, const std::set<std::pair<uint16_t, in_addr>>& neighborVec) {
     std::unique_lock<std::shared_mutex> lock(mu);
     startpoint[port] = neighborVec;
     if (start != -1)
@@ -121,11 +126,11 @@ void RouterTable::updateStartPoint(int port, const std::set<std::pair<uint16_t, 
 }
 
 struct BFSInfo {
-    int port;
+    int      port;
     uint16_t rid;
-    in_addr nexthop;
+    in_addr  nexthop;
     BFSInfo(int port, uint16_t rid, in_addr nexthop)
-        : port(port), rid(rid), nexthop(nexthop) {};
+        : port(port), rid(rid), nexthop(nexthop){};
 };
 
 void RouterTable::recomputeDijkstra() {
@@ -137,17 +142,17 @@ void RouterTable::recomputeDijkstra() {
     std::set<uint16_t> visited;
     visited.insert(start);
     std::deque<BFSInfo> q;
-    for (const auto& p: startpoint) {
-        for (auto r: p.second) {
+    for (const auto& p : startpoint) {
+        for (auto r : p.second) {
             q.push_back(BFSInfo(p.first, r.first, r.second));
         }
     }
     while (!q.empty()) {
         auto t = q.front();
         q.pop_front();
-        int port = t.port;
-        uint16_t router = t.rid;
-        in_addr nexthopip = t.nexthop;
+        int      port      = t.port;
+        uint16_t router    = t.rid;
+        in_addr  nexthopip = t.nexthop;
         if (visited.find(router) != visited.end()) {
             continue;
         }
@@ -155,10 +160,10 @@ void RouterTable::recomputeDijkstra() {
         auto iter = graph.find(router);
         if (iter == graph.end())
             continue;
-        for (const IP& i: iter->second.portInfo) {
+        for (const IP& i : iter->second.portInfo) {
             tree.insert(i, nexthopip, port);
         }
-        for (uint16_t n: iter->second.neighborRouter) {
+        for (uint16_t n : iter->second.neighborRouter) {
             q.push_back(BFSInfo(port, n, nexthopip));
         }
     }
@@ -178,7 +183,7 @@ void RouterTable::setStart(int self) {
 
 bool RouterTable::isNewer(uint16_t rid, uint32_t timestamp) {
     std::shared_lock<std::shared_mutex> lock(mu);
-    auto iter = graph.find(rid);
+    auto                                iter = graph.find(rid);
     if (iter == graph.end())
         return true;
     return iter->second.timestamp - timestamp >= 40000;
@@ -195,23 +200,23 @@ void RouterTable::printGraph() {
     std::shared_lock<std::shared_mutex> lock(mu);
     printf("------------- graph -------------\n");
     printf("startpoint:\n");
-    for (const auto& x: startpoint) {
+    for (const auto& x : startpoint) {
         printf("  device: %d\n", x.first);
         printf("    adjwith:\n");
-        for (auto y: x.second) {
+        for (auto y : x.second) {
             printf("      %d %s\n", y.first, inet_ntoa(y.second));
         }
     }
     printf("nodes:\n");
-    for (const auto& x: graph) {
+    for (const auto& x : graph) {
         printf("  router ID: %d\n", x.first);
         printf("    ip:\n");
-        for (const auto& y: x.second.portInfo) {
+        for (const auto& y : x.second.portInfo) {
             printIP(&y);
             printf("\n");
         }
         printf("    adjwith:\n");
-        for (const auto& y: x.second.neighborRouter) {
+        for (const auto& y : x.second.neighborRouter) {
             printf("      %d\n", y);
         }
     }
