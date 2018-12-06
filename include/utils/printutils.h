@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <protocol/RouterProtocol.h>
 #include <protocol/ip.h>
+#include <netinet/tcp.h>
 
 inline void printMAC(const void* buf) {
     const uint8_t* macbuf = (const uint8_t*)buf;
@@ -71,6 +72,29 @@ inline void printRoutePacket(const void* buf, int len) {
     }
 }
 
+inline void printTCPPacket(const void* buf, int len) {
+    printf("type: TCP\n");
+    const tcphdr *hdr = (const tcphdr*)buf;
+    printf("src port: %d\n", htonl16(hdr->th_sport));
+    printf("dst port: %d\n", htonl16(hdr->th_dport));
+    printf("sequence number: %d\n", htonl32(hdr->th_seq));
+    printf("ack number: %d\n", htonl32(hdr->th_ack));
+    printf("offset: %d\n", hdr->th_off);
+    printf("flags:\n");
+    if (hdr->th_flags & TH_FIN)
+        printf("  FIN\n");
+    if (hdr->th_flags & TH_SYN)
+        printf("  SYN\n");
+    if (hdr->th_flags & TH_RST)
+        printf("  RST\n");
+    if (hdr->th_flags & TH_PUSH)
+        printf("  PSH\n");
+    if (hdr->th_flags & TH_ACK)
+        printf("  ACK\n");
+    printf("window: %d\n", htonl16(hdr->th_win));
+    // TODO: options
+}
+
 inline void printIPPacket(const void* buf, int len) {
     printf("type: IP\n");
     const ip* hdr        = (const ip*)buf;
@@ -86,6 +110,8 @@ inline void printIPPacket(const void* buf, int len) {
     uint8_t protocol = ((uint8_t*)buf)[9];
     if (protocol == ROUTER_PROTO_NUM) {
         printRoutePacket((uint8_t*)buf + header_len, packet_len - header_len);
+    } else if (protocol == IPPROTO_TCP) {
+        printTCPPacket((uint8_t*)buf + header_len, packet_len - header_len);
     } else {
         printf("type: Unknown(");
         printf("%d", protocol);
