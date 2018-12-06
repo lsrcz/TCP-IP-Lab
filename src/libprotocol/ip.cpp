@@ -101,6 +101,14 @@ bool isLocalIP(const in_addr src) {
     return false;
 }
 
+int getSomeIP(in_addr *ip) {
+    std::shared_lock<std::shared_mutex> lock(ipmu);
+    if (ip_map.empty())
+        return -1;
+    *ip = ip_map.begin()->second.ip;
+    return 0;
+}
+
 bool isMulticastIP(const struct in_addr src) {
     uint8_t fst = *((const uint8_t*)&src);
     return fst >= 224 && fst <= 239;
