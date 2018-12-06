@@ -245,8 +245,14 @@ def main():
     name = input()
     #name = './include/wrapper/pcap.h.raw'
     h = Header()
+    l = name.split('/')[:-1]
     h.read_file(name)
+    l.append(h.name)
+    outfilename = '/'.join(l)
     print(h)
+    with open(outfilename, 'w') as f:
+        f.write(str(h))
+
 
 if __name__ == '__main__':
     main()
