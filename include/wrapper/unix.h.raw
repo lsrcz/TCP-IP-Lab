@@ -1,0 +1,11 @@
+@filename unix.h
+@include <stdlib.h>
+
+@type system
+@name malloc
+@arg size
+@body
+@decl void *_ptr
+@reteq NULL _ptr
+@endbody
+@end
