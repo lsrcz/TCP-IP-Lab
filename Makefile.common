@@ -1,7 +1,7 @@
 MODSRCDIR = .
 
 CXXFLAGS += -Wall -Werror -Wno-unused-value -Wno-unused-but-set-variable -Wno-unused-variable -std=c++17
-CXXFLAGS += -I$(SRCBASE)/include
+CXXFLAGS += -I$(SRCBASE)/include -I.
 
 ifeq ($(DEBUG), TRUE)
 	CXXFLAGS += -ggdb3 -O0
