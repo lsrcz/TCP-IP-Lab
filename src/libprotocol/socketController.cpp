@@ -1,7 +1,7 @@
-#include <protocol/socketController.h>
-#include <protocol/ip.h>
-#include <utils/netutils.h>
 #include <netinet/tcp.h>
+#include <protocol/ip.h>
+#include <protocol/socketController.h>
+#include <utils/netutils.h>
 
 socketController& socketController::getInstance() {
     static socketController* sc = nullptr;
@@ -33,16 +33,15 @@ int socketController::connect(int socket, const struct sockaddr_in* address) {
     return iter->second.connect(address);
 }
 
-
-bool socketController::isListened( sockaddr_in s) {
+bool socketController::isListened(sockaddr_in s) {
     return listeningSet.find(s) != listeningSet.end();
 }
 
-bool socketController::isConnected( sockaddr_in s) {
+bool socketController::isConnected(sockaddr_in s) {
     return connectedSet.find(s) != connectedSet.end();
 }
 
-int socketController::getFreshAddr(sockaddr_in *addr) {
+int socketController::getFreshAddr(sockaddr_in* addr) {
     sockaddr_in s;
     memset(&s, 0, sizeof(s));
     s.sin_family = AF_INET;
@@ -56,16 +55,16 @@ int socketController::getFreshAddr(sockaddr_in *addr) {
         s.sin_port = nxtport;
         nxtport++;
     }
- ok:
+ok:
     *addr = s;
     return 0;
 }
 
 int socketController::recv(const void* buf, int len) {
-    const ip* iphdr = (const ip*)buf;
-    uint8_t iphl = iphdr->ip_hl;
-    const tcphdr* tcph = (const tcphdr*)((uint8_t*)buf + iphl * 4);
-    sockaddr_in src, dst;
+    const ip*     iphdr = (const ip*)buf;
+    uint8_t       iphl  = iphdr->ip_hl;
+    const tcphdr* tcph  = (const tcphdr*)((uint8_t*)buf + iphl * 4);
+    sockaddr_in   src, dst;
     src.sin_addr = iphdr->ip_src;
     src.sin_port = tcph->th_sport;
     dst.sin_addr = iphdr->ip_dst;
@@ -73,8 +72,8 @@ int socketController::recv(const void* buf, int len) {
     if (tcpChksum(tcph, len - iphl * 4, src.sin_addr, dst.sin_addr) != 0) {
         return -1;
     }
-    for (auto &p : fd2socket) {
-        auto &s = p.second;
+    for (auto& p : fd2socket) {
+        auto& s = p.second;
         if (src == s.getDst()) {
             if (dst == s.getSrc()) {
                 return s.recv(buf, len);

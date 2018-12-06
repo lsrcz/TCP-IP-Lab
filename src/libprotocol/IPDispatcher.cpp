@@ -32,8 +32,8 @@ int IPPacketDispatcher::processPacket(const void* packet, int len, int id) {
         if (callbacks.find(ip_proto) == callbacks.end()) {
             return -2;
         }
-        return (*(callbacks.find(ip_proto))->second)(
-            (uint8_t*)packet, packet_len);
+        return (*(callbacks.find(ip_proto))->second)((uint8_t*)packet,
+                                                     packet_len);
     } else {
         return router.otherPacketRecv(packet, packet_len, id);
     }

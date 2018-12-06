@@ -101,7 +101,7 @@ bool isLocalIP(const in_addr src) {
     return false;
 }
 
-int getSomeIP(in_addr *ip) {
+int getSomeIP(in_addr* ip) {
     std::shared_lock<std::shared_mutex> lock(ipmu);
     if (ip_map.empty())
         return -1;

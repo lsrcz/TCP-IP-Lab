@@ -1,9 +1,9 @@
 #ifndef PRINTUTILS_H
 #define PRINTUTILS_H
 #include <cstdio>
+#include <netinet/tcp.h>
 #include <protocol/RouterProtocol.h>
 #include <protocol/ip.h>
-#include <netinet/tcp.h>
 
 inline void printMAC(const void* buf) {
     const uint8_t* macbuf = (const uint8_t*)buf;
@@ -74,7 +74,7 @@ inline void printRoutePacket(const void* buf, int len) {
 
 inline void printTCPPacket(const void* buf, int len) {
     printf("type: TCP\n");
-    const tcphdr *hdr = (const tcphdr*)buf;
+    const tcphdr* hdr = (const tcphdr*)buf;
     printf("src port: %d\n", htonl16(hdr->th_sport));
     printf("dst port: %d\n", htonl16(hdr->th_dport));
     printf("sequence number: %d\n", htonl32(hdr->th_seq));

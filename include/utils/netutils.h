@@ -141,11 +141,12 @@ inline bool operator==(const in_addr a, const in_addr b) {
     return a.s_addr == b.s_addr;
 }
 
-inline bool operator<(const sockaddr_in &l, const sockaddr_in &r) {
-    return l.sin_addr < r.sin_addr || (l.sin_addr == r.sin_addr && l.sin_port < r.sin_port);
+inline bool operator<(const sockaddr_in& l, const sockaddr_in& r) {
+    return l.sin_addr < r.sin_addr
+           || (l.sin_addr == r.sin_addr && l.sin_port < r.sin_port);
 }
 
-inline bool operator==(const sockaddr_in &l, const sockaddr_in &r) {
+inline bool operator==(const sockaddr_in& l, const sockaddr_in& r) {
     return l.sin_addr == r.sin_addr && l.sin_port == r.sin_port;
 }
 #endif  // NETUTILS_H

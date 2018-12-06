@@ -1,12 +1,11 @@
-#include <protocol/socket.h>
-#include <protocol/TCP.h>
-#include <utils/errorutils.h>
-#include <wrapper/unix_file.h>
-#include <wrapper/unix.h>
 #include <arpa/inet.h>
+#include <protocol/TCP.h>
+#include <protocol/socket.h>
 #include <protocol/socketController.h>
+#include <utils/errorutils.h>
 #include <utils/netutils.h>
-
+#include <wrapper/unix.h>
+#include <wrapper/unix_file.h>
 
 int __wrap_socket(int domain, int type, int protocol) {
     if (domain != AF_INET) {
@@ -24,7 +23,8 @@ int __wrap_socket(int domain, int type, int protocol) {
     return socketController::getInstance().socket();
 }
 
-int __wrap_connect(int socket, const struct sockaddr* address, socklen_t address_len) {
+int __wrap_connect(int socket, const struct sockaddr* address,
+                   socklen_t address_len) {
     if (address_len != sizeof(sockaddr_in)) {
         errno = EAFNOSUPPORT;
         return -1;
@@ -33,11 +33,11 @@ int __wrap_connect(int socket, const struct sockaddr* address, socklen_t address
         errno = EAFNOSUPPORT;
         return -1;
     }
-    const struct sockaddr_in *addrin = (const struct sockaddr_in *)address;
+    const struct sockaddr_in* addrin = (const struct sockaddr_in*)address;
     return socketController::getInstance().connect(socket, addrin);
 }
 
-static int serviceToPort(const char *service) {
+static int serviceToPort(const char* service) {
     if (strlen(service) > 5)
         return -1;
     int ret = 0;
@@ -53,7 +53,8 @@ static int serviceToPort(const char *service) {
     return ret;
 }
 
-int __wrap_getaddrinfo(const char* node, const char* service, const struct addrinfo* hints, struct addrinfo** res) {
+int __wrap_getaddrinfo(const char* node, const char* service,
+                       const struct addrinfo* hints, struct addrinfo** res) {
     printf("%d\n", serviceToPort(service));
     if (hints != NULL) {
         if ((hints->ai_family != AF_INET) && (hints->ai_family != AF_UNSPEC)) {
@@ -72,17 +73,20 @@ int __wrap_getaddrinfo(const char* node, const char* service, const struct addri
     if (node == NULL && service == NULL)
         return EAI_NONAME;
     ErrorBehavior eb("Out of memory", true, true);
-    addrinfo* r = (addrinfo*)Malloc(sizeof(addrinfo), eb, return EAI_MEMORY);
-    r->ai_flags = 0;
-    r->ai_family = AF_INET;
+    addrinfo* r    = (addrinfo*)Malloc(sizeof(addrinfo), eb, return EAI_MEMORY);
+    r->ai_flags    = 0;
+    r->ai_family   = AF_INET;
     r->ai_socktype = SOCK_STREAM;
     r->ai_protocol = IPPROTO_TCP;
-    r->ai_addrlen = sizeof(sockaddr_in);
-    r->ai_addr = (sockaddr*)Malloc(sizeof(sockaddr_in), eb, free(r);return EAI_MEMORY);
+    r->ai_addrlen  = sizeof(sockaddr_in);
+    r->ai_addr =
+        (sockaddr*)Malloc(sizeof(sockaddr_in), eb, free(r); return EAI_MEMORY);
     memset(r->ai_addr, 0, sizeof(sockaddr_in));
     ((sockaddr_in*)(r->ai_addr))->sin_family = AF_INET;
     if (service != NULL) {
-        if ((((sockaddr_in*)(r->ai_addr))->sin_port = htonl16(serviceToPort(service))) < 0) {
+        if ((((sockaddr_in*)(r->ai_addr))->sin_port =
+                 htonl16(serviceToPort(service)))
+            < 0) {
             free(r);
             return EAI_NONAME;
         }
@@ -94,7 +98,7 @@ int __wrap_getaddrinfo(const char* node, const char* service, const struct addri
         }
     }
     r->ai_canonname = NULL;
-    r->ai_next = NULL;
-    *res = r;
+    r->ai_next      = NULL;
+    *res            = r;
     return 0;
 }
