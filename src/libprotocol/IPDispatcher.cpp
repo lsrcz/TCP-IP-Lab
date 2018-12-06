@@ -33,7 +33,7 @@ int IPPacketDispatcher::processPacket(const void* packet, int len, int id) {
             return -2;
         }
         return (*(callbacks.find(ip_proto))->second)(
-            (uint8_t*)packet + header_len, packet_len - header_len);
+            (uint8_t*)packet, packet_len);
     } else {
         return router.otherPacketRecv(packet, packet_len, id);
     }
