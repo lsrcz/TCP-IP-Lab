@@ -17,6 +17,7 @@ void deleteDeviceIP(const int device);
 int  getDeviceIP(const int device, IP* ip);
 int  getIPDevice(const in_addr ip);
 bool isLocalIP(const in_addr ip);
+int getSomeIP(in_addr *ip);
 /**
  * @brief Send an IP packet to specified host.
  *
