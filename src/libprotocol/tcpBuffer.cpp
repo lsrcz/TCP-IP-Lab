@@ -66,7 +66,7 @@ bool tcpBuffer::have_nolock() {
 
 tcpBufferItem tcpBuffer::get() {
     std::lock_guard<std::mutex> lock(mu);
-    assert(have());
+    assert(have_nolock());
     len -= buf.front().len;
     tcpBufferItem ret = buf.front();
     buf.pop_front();
@@ -75,5 +75,6 @@ tcpBufferItem tcpBuffer::get() {
 
 void tcpBuffer::put(const uint8_t* b, int len) {
     std::lock_guard<std::mutex> lock(mu);
+    this->len += len;
     buf.emplace_back(b, len);
 }
