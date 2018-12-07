@@ -68,7 +68,7 @@ int request_arp(in_addr ip, void* m) {
             return 0;
         }
     }
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 10; ++i) {
         std::vector<int> devices = getAllDevice();
         if (devices.empty()) {
             ErrorBehavior eb("No device avaliable", false, true);
