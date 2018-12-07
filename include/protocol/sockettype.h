@@ -6,9 +6,11 @@
 #include <protocol/TCP.h>
 #include <protocol/socketController.h>
 #include <set>
+#include <condition_variable>
 
 class socketController;
 class socket_t {
+    friend class socketController;
     std::mutex        mu;
     socketController& sc;
     tcb               t;
@@ -30,13 +32,24 @@ class socket_t {
 
     static bool sockaddr_in_iszero(sockaddr_in x);
 
+
 public:
     socket_t(socketController& sc);
+    socket_t(socketController& sc, sockaddr_in src, sockaddr_in dst);
     int bind(const struct sockaddr_in* address);
     int connect(const sockaddr_in* address);
     int listen(int backlog);
     int accept(struct sockaddr_in* addr);
     int recv(const void* buf, int len);
+    int genConnectFD(sockaddr_in src, sockaddr_in dst, tcpSeq rcv_nxt, tcpSeq irs);
+    inline void setSrc(sockaddr_in x) {
+        src = x;
+        t.src = x;
+    }
+    inline void setDst(sockaddr_in x) {
+        dst = x;
+        t.dst = x;
+    }
 
 public:
     inline bool isListen() {
@@ -62,6 +75,12 @@ public:
     }
     inline sockaddr_in getDst() {
         return dst;
+    }
+    inline bool haveSrc() {
+        return !sockaddr_in_iszero(src);
+    }
+    inline bool haveDst() {
+        return !sockaddr_in_iszero(dst);
     }
 };
 

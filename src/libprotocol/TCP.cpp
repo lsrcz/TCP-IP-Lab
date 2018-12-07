@@ -19,6 +19,15 @@ tcb::tcb(socket_t& socket) : socket(socket) {
     snd_una = snd_nxt = iss;
     t_srtt            = 0;
     t_rto             = 1;
+
+    using namespace std::literals::chrono_literals;
+    sndTimer.setPeriodTimer(20ms, [&]() {
+            while (snd_ctrl_buf.have()) {
+                auto bi = snd_ctrl_buf.get();
+                sendIPPacket(src.sin_addr, dst.sin_addr, IPPROTO_TCP, bi.buf, bi.len);
+            }
+            return;
+        });
 }
 
 tcphdr tcb::getHdr(uint8_t flags, uint16_t win) {
@@ -145,7 +154,9 @@ int tcb::send(int seg_type, uint32_t seq /* for rst, network*/) {
     }
     int totlen = tcpCopyToBuf(buf, hdr, optbuf, optlen);
     snd_nxt += 1;
-    return sendIPPacket(src.sin_addr, dst.sin_addr, IPPROTO_TCP, buf, totlen);
+    snd_ctrl_buf.put(buf, totlen);
+    return 0;
+    // return sendIPPacket(src.sin_addr, dst.sin_addr, IPPROTO_TCP, buf, totlen);
 }
 
 int tcb::send(const tcpBufferItem& buf, int type) {
@@ -237,11 +248,105 @@ int tcb::recv(const void* buf, int len) {
         if (hdr->th_flags & TH_ACK)
             return send(TH_RST, hdr->th_ack);
         if (hdr->th_flags & TH_SYN) {
-            rcv_nxt = htonl32(hdr->th_seq) + 1;
-            irs     = htonl32(hdr->th_seq);
+            // rcv_nxt = htonl32(hdr->th_seq) + 1;
+            // irs     = htonl32(hdr->th_seq);
+            // TODO: RFC 793, p66: any other control or text should be queued for processing later
+            sockaddr_in src;
+            sockaddr_in dst;
+            memset(&src, 0, sizeof(src));
+            memset(&src, 0, sizeof(dst));
+            src.sin_family = AF_INET;
+            src.sin_addr = iphdr->ip_src;
+            src.sin_port = hdr->th_sport;
+            dst.sin_family = AF_INET;
+            dst.sin_addr = iphdr->ip_dst;
+            dst.sin_port = hdr->th_dport;
+            int fd = socket.genConnectFD(dst, src, htonl32(hdr->th_seq) + 1, htonl32(hdr->th_seq));
+            return fd;
+            // TODO
         }
         // TODO
     } else {
+        int doff = hdr->th_off * 4;
+        int segmentlen = len - iphl * 4 - doff;
+        const uint8_t *data = (const uint8_t *)hdr + doff;
+        uint32_t seq = htonl32(hdr->th_seq);
+        bool ok = false;
+        if (segmentlen == 0) {
+            if (rcv_wnd == 0 && seq == rcv_nxt)
+                ok = true;
+            if (rcv_nxt <= seq && seq < rcv_nxt + rcv_wnd)
+                ok = true;
+        } else {
+            if (rcv_nxt <= seq && seq < rcv_nxt + rcv_wnd)
+                ok = true;
+            if (rcv_nxt <= seq + segmentlen - 1 && seq + segmentlen - 1 < rcv_nxt + rcv_wnd)
+                ok = true;
+        }
+        if (!ok) {
+            send(TH_ACK);
+            return 0;
+        }
+        // second check the RST bit
+        if (hdr->th_flags & TH_RST) {
+            state = TCP_CLOSE;
+            reset = 1;
+            socket.setReset(true);
+            return 0;
+        }
+
+        // fourth, check the SYN bit
+        if (hdr->th_flags & TH_SYN) {
+            send(TH_RST);
+            state = TCP_CLOSE;
+            reset = 1;
+            socket.setReset(true);
+            flush = 1;
+            return 0;
+        }
+
+        // fifth, check the ACK field
+        if (hdr->th_flags & TH_ACK) {
+            uint32_t ack = htonl32(hdr->th_ack);
+            uint32_t seq = htonl32(hdr->th_seq);
+            uint16_t win = htonl16(hdr->th_win);
+            if (state == TCP_SYN_RECV) {
+                if (snd_una <= ack && ack <= snd_nxt) {
+                    state = TCP_ESTABLISHED;
+                } else {
+                    send(TH_RST, hdr->th_ack);
+                    return 0;
+                }
+            } else if (state == TCP_ESTABLISHED || state == TCP_FIN_WAIT1 || state == TCP_FIN_WAIT2 || state == TCP_CLOSE_WAIT || state == TCP_CLOSING) {
+                if (snd_una < ack && ack <= snd_nxt) {
+                    snd_una = ack;
+                    // TODO: remove unacknowledged
+                    // removeUnack();
+                    if (snd_wl1 < seq || (snd_wl1 == seq && snd_wl2 <= ack)) {
+                        snd_wnd = win;
+                        snd_wl1 = seq;
+                        snd_wl2 = ack;
+                    }
+                    // TODO: fin acked???
+                    if (state == TCP_FIN_WAIT2) {
+                        // TODO: wait for retransmission of FIN
+                    }
+                    if (state == TCP_CLOSING) {
+                        // TODO: wait for retransmission of FIN
+                    }
+                } else if (ack > snd_nxt) {
+                    send(TH_ACK);
+                    return 0;
+                }
+            } else if (state == TCP_LAST_ACK) {
+                // TODO: wait for retransmission of FIN
+            } else if (state == TCP_TIME_WAIT) {
+                // 2 MSL
+            }
+        } else {
+            return 0;
+        }
+        // TODO: process the segment text
     }
     return 0;
 }

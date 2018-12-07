@@ -5,6 +5,7 @@
 #include <map>
 #include <protocol/sockettype.h>
 #include <set>
+#include <memory>
 
 class socket_t;
 class socketController {
@@ -14,7 +15,8 @@ class socketController {
     std::list<int>          freeportlist;
     int                     nxtfd = 1024;
     std::list<int>          freelist;
-    std::map<int, socket_t> fd2socket;
+    std::map<int, std::unique_ptr<socket_t>> fd2socket;
+
 
 public:
     static socketController& getInstance();
@@ -24,6 +26,9 @@ public:
     int                      socket();
     int connect(int socket, const struct sockaddr_in* address);
     int recv(const void* buf, int len);
+    int registerSocket(std::unique_ptr<socket_t> &&ptr);
+    int bind(int socket, const struct sockaddr_in* addr);
+    int listen(int socket, int backlog);
 };
 
 int TCPSegmentReceiveCallback(const void* buf, int len);

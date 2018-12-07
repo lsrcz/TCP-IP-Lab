@@ -7,7 +7,7 @@ class tcpSeq {
 public:
     inline tcpSeq(uint32_t base) : base(base) {}
     inline tcpSeq() : base(0) {}
-    inline bool operator<(const tcpSeq& rhs) {
+    /*inline bool operator<(const tcpSeq& rhs) {
         return (int)(base - rhs.base) < 0;
     }
     inline bool operator==(const tcpSeq& rhs) {
@@ -24,7 +24,7 @@ public:
     }
     inline bool operator!=(const tcpSeq& rhs) {
         return !(*this == rhs);
-    }
+        }*/
     inline tcpSeq& operator+=(uint32_t p) {
         base += p;
         return *this;

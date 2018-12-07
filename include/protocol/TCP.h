@@ -9,19 +9,27 @@
 #include <protocol/tcpBuffer.h>
 #include <shared_mutex>
 #include <sys/socket.h>
+#include <thread>
 #include <utils/lockutils.h>
+#include <utils/timeutils.h>
 
 class socket_t;
+class socketController;
 
 class tcb {
+    Timer sndTimer;
+
     friend class socket_t;
+    friend class socketController;
     socket_t&               socket;
     int                     state;
     tcpBuffer               rcv_buf;
     tcpBuffer               snd_buf;
+    tcpBuffer               snd_ctrl_buf;
     std::mutex              mu;
     std::condition_variable statecv;
     int                     reset = 0;
+    int flush = 0;
 
     sockaddr_in src;
     sockaddr_in dst;
@@ -36,6 +44,10 @@ class tcb {
     tcpSeq   rcv_nxt;
     tcpSeq   irs;
     uint64_t rcv_wnd;
+
+    // sliding window
+    std::deque<uint8_t> data;
+    std::deque<uint8_t> valid;
 
     // transmit timing
     float              t_srtt;

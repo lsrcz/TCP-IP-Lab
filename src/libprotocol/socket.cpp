@@ -11,6 +11,12 @@ socket_t::socket_t(socketController& sc) : sc(sc), t(*this) {
     memset(&dst, 0, sizeof(dst));
 }
 
+socket_t::socket_t(socketController& sc, sockaddr_in src, sockaddr_in dst)
+    : sc(sc), t(*this), src(src), dst(dst) {
+    setSrc(src);
+    setDst(dst);
+}
+
 int socket_t::bind(const struct sockaddr_in* address) {
     std::lock_guard<std::mutex> lock(mu);
     if (!sockaddr_in_iszero(src))
@@ -55,6 +61,7 @@ int socket_t::listen(int backlog) {
         return -1;
     }
 
+    this->backlog = backlog;
     t.listen();
     listenFlag = true;
     return 0;
@@ -76,4 +83,16 @@ int socket_t::accept(struct sockaddr_in* addr) {
 
 int socket_t::recv(const void* buf, int len) {
     return t.recv(buf, len);
+}
+
+int socket_t::genConnectFD(sockaddr_in src, sockaddr_in dst, tcpSeq rcv_nxt, tcpSeq irs) {
+    auto ptr = std::make_unique<socket_t>(sc, src, dst);
+    auto rawptr = ptr.get();
+    ptr->father = this; // so, the child should be disabled early
+    ptr->t.state = TCP_SYN_RECV;
+    ptr->t.irs = irs;
+    ptr->t.rcv_nxt = rcv_nxt;
+    int fd = sc.registerSocket(std::move(ptr));
+    rawptr->t.send(TH_ACK|TH_SYN);
+    return fd;
 }

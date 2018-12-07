@@ -23,6 +23,23 @@ int __wrap_socket(int domain, int type, int protocol) {
     return socketController::getInstance().socket();
 }
 
+int __wrap_bind(int socket, const struct sockaddr* address, socklen_t address_len) {
+    const struct sockaddr_in* addrin = (const struct sockaddr_in*)address;
+    if (addrin->sin_family != AF_INET) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (address_len != sizeof(sockaddr_in)) {
+        errno = EINVAL;
+        return -1;
+    }
+    return socketController::getInstance().bind(socket, addrin);
+}
+
+int __wrap_listen(int socket, int backlog) {
+    return socketController::getInstance().listen(socket, backlog);
+}
+
 int __wrap_connect(int socket, const struct sockaddr* address,
                    socklen_t address_len) {
     if (address_len != sizeof(sockaddr_in)) {
