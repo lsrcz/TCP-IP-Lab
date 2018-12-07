@@ -29,6 +29,8 @@ class tcb {
     std::mutex              mu;
     std::condition_variable statecv;
     int                     reset = 0;
+    int                     activeClose = 0;
+    int                     passiveClose = 0;
     int flush = 0;
 
     sockaddr_in src;
@@ -44,6 +46,8 @@ class tcb {
     tcpSeq   rcv_nxt;
     tcpSeq   irs;
     uint64_t rcv_wnd;
+
+    tcpSeq   seq_fin;
 
     // sliding window
     std::deque<uint8_t> data;
@@ -69,6 +73,7 @@ class tcb {
     int                 send(int type, uint32_t seq = 0);
     int                 send(const tcpBufferItem& buf, int type);
     int                 recv(const void* buf, int len);
+    void sendCtrlBuf();
 
 public:
     tcb(socket_t& socket);

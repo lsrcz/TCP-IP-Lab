@@ -96,3 +96,7 @@ int socket_t::genConnectFD(sockaddr_in src, sockaddr_in dst, tcpSeq rcv_nxt, tcp
     rawptr->t.send(TH_ACK|TH_SYN);
     return fd;
 }
+
+int socket_t::close() {
+    return t.close();
+}

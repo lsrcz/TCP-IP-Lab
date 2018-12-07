@@ -18,7 +18,10 @@ int main() {
     sleep(3);
     connect(fd, res->ai_addr, sizeof(sockaddr_in));
 
-    sleep(10);
+    sleep(1);
+    close(fd);
 
+
+    pause();
     freeaddrinfo(res);
 }

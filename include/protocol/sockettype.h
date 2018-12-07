@@ -19,6 +19,7 @@ class socket_t {
     bool              listenFlag  = false;
     bool              connectFlag = false;
     bool              resetFlag   = false;
+    bool              closeFlag   = false;
 
     /* listen */
     /* connfd */
@@ -41,6 +42,7 @@ public:
     int listen(int backlog);
     int accept(struct sockaddr_in* addr);
     int recv(const void* buf, int len);
+    int close();
     int genConnectFD(sockaddr_in src, sockaddr_in dst, tcpSeq rcv_nxt, tcpSeq irs);
     inline void setSrc(sockaddr_in x) {
         src = x;
@@ -69,6 +71,12 @@ public:
     }
     inline void setReset(int f) {
         resetFlag = f;
+    }
+    inline bool isClose() {
+        return closeFlag;
+    }
+    inline void setClose(bool f) {
+        closeFlag = f;
     }
     inline sockaddr_in getSrc() {
         return src;

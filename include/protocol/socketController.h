@@ -16,7 +16,14 @@ class socketController {
     int                     nxtfd = 1024;
     std::list<int>          freelist;
     std::map<int, std::unique_ptr<socket_t>> fd2socket;
-
+    std::mutex closingmu;
+    std::condition_variable closingcv;
+    std::set<int> closing;
+    std::mutex needClosemu;
+    std::set<int> needClose;
+    std::thread worker;
+    socketController();
+    bool shouldStop = false; // only true when the destructor is called
 
 public:
     static socketController& getInstance();
@@ -29,6 +36,9 @@ public:
     int registerSocket(std::unique_ptr<socket_t> &&ptr);
     int bind(int socket, const struct sockaddr_in* addr);
     int listen(int socket, int backlog);
+    int close(int fd);
+    bool isSocket(int fd);
+    ~socketController();
 };
 
 int TCPSegmentReceiveCallback(const void* buf, int len);

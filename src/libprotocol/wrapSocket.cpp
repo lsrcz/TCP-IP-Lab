@@ -54,6 +54,13 @@ int __wrap_connect(int socket, const struct sockaddr* address,
     return socketController::getInstance().connect(socket, addrin);
 }
 
+int __wrap_close(int fd) {
+    if (!socketController::getInstance().isSocket(fd))
+        return __real_close(fd);
+    // TODO:
+    return socketController::getInstance().close(fd);
+}
+
 static int serviceToPort(const char* service) {
     if (strlen(service) > 5)
         return -1;

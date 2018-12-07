@@ -3,6 +3,46 @@
 #include <protocol/socketController.h>
 #include <utils/netutils.h>
 
+socketController::socketController() {
+    worker = std::thread([&]() {
+        using namespace std::literals::chrono_literals;
+        while (!shouldStop) {
+            std::unique_lock<std::mutex> lock(closingmu);
+            closingcv.wait_for(lock, 50ms);
+            {
+                std::lock_guard<std::mutex> lock1(needClosemu);
+                while (!needClose.empty()) {
+                    auto iter = needClose.begin();
+                    socket_t *ptr = fd2socket.find(*iter)->second.get();
+                    ptr->close();
+                    closing.insert(*iter);
+                    needClose.erase(iter);
+                }
+                std::vector<int> willClose;
+                for (int fd : closing) {
+                    if (fd2socket[fd]->isClose()) {
+                        willClose.push_back(fd);
+                    }
+                }
+                for (int fd : willClose) {
+                    socket_t *ptr = fd2socket[fd].get();
+                    auto src = ptr->src;
+                    auto iter = listeningSet.find(src);
+                    if (iter != listeningSet.end())
+                        listeningSet.erase(iter);
+                    iter = connectedSet.find(src);
+                    if (iter != connectedSet.end())
+                        connectedSet.erase(iter);
+                    freeportlist.push_back(htonl16(src.sin_port));
+                    freelist.push_back(fd);
+                    fd2socket.erase(fd2socket.find(fd));
+                    closing.erase(closing.find(fd));
+                }
+            }
+        }
+        });
+}
+
 socketController& socketController::getInstance() {
     static socketController* sc = nullptr;
     if (sc == nullptr) {
@@ -146,4 +186,31 @@ int socketController::listen(int socket, int backlog) {
     }
     int ret = iter->second->listen(backlog);
     return ret + 1;
+}
+
+int socketController::close(int fd) {
+    std::lock_guard<std::mutex> lock1(closingmu);
+    if (closing.find(fd) != closing.end()) {
+        errno = EBADF;
+        return -1;
+    }
+    {
+        std::lock_guard<std::mutex> lock2(needClosemu);
+        if (needClose.find(fd) != needClose.end()) {
+            errno = EBADF;
+            return -1;
+        }
+        needClose.insert(fd);
+    }
+    return 0;
+}
+
+bool socketController::isSocket(int fd) {
+    auto iter = fd2socket.find(fd);
+    return !(iter == fd2socket.end());
+}
+
+socketController::~socketController() {
+    shouldStop = true;
+    worker.join();
 }
