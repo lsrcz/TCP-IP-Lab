@@ -19,6 +19,7 @@ class Header:
         self.name = None
         self.include = []
         self.funcs = []
+        self.topraw = []
     def read_file(self, filename):
         with open(filename) as f:
             code = list(f)
@@ -31,6 +32,8 @@ class Header:
                 self.include.append(op)
             if t == 'func':
                 self.funcs.append(op)
+            if t == 'topraw':
+                self.topraw.extend(op)
     def __str__(self):
         ret = ""
         ret += '#ifndef ' + self.name.replace('.', '_').upper() + '\n'
@@ -39,6 +42,10 @@ class Header:
         for i in self.include:
             ret += '#include ' + i + '\n'
         ret += '#include <utils/errorutils.h>\n'
+        ret += '\n'
+
+        for s in self.topraw:
+            ret += s
         ret += '\n'
 
         for f in self.funcs:
@@ -56,6 +63,7 @@ class Func:
         self.arg = None
         self.max_vaarg = 0
         self.body = None
+        self.needwrap = False
     
     def initial_macro(self):
         return formatmacro(['#define ' + self.name + '(' + ', '.join(self.arg) + ', ...) ({',
@@ -65,6 +73,10 @@ class Func:
                             '})'])
     def after_macro(self):
         formatted = []
+        if self.needwrap:
+            wrappedname = '__real_' + self.rawname
+        else:
+            wrappedname = self.rawname
         for i in range(self.max_vaarg + 1):
             lst = []
             fstline = '#define _' + self.name + str(i) + '(' + ', '.join(self.arg)
@@ -93,7 +105,7 @@ class Func:
                 if stripl.startswith('@decl'):
                     decllines.append(stripl[5:].strip() + ';')
                     continue
-                if stripl.startswith('@ret') and not stripl.startswith('@reteq'):
+                if stripl.startswith('@ret') and not stripl.startswith('@reteq') and not stripl.startswith('@retneq'):
                     retlines.append(stripl[4:].strip() + ';')
                     continue
                 if stripl.startswith('@err'):
@@ -101,7 +113,7 @@ class Func:
                     continue
                 if stripl.find('@call') != -1:
                     pos = stripl.find('@call')
-                    callingstr = stripl[0:pos] + self.rawname + '(' + ', '.join(self.arg)
+                    callingstr = stripl[0:pos] + wrappedname + '(' + ', '.join(self.arg)
                     for j in range(i):
                         callingstr += ', _a' + str(j)
                     callingstr += ')'
@@ -113,7 +125,7 @@ class Func:
                     workinglines.append('_eb' + str(i) + '.pcap = ' + ptr + ';')
                     continue
                 if stripl.startswith('@noreteq'):
-                    callingstr = 'if (' + self.rawname + '(' + ', '.join(self.arg)
+                    callingstr = 'if (' + wrappedname + '(' + ', '.join(self.arg)
                     for j in range(i):
                         callingstr += ', _a' + str(j)
                     callingstr += ') == '
@@ -125,7 +137,7 @@ class Func:
                     workinglines.append('}')
                     continue
                 if stripl.startswith('@noretneq'):
-                    callingstr = 'if (' + self.rawname + '(' + ', '.join(self.arg)
+                    callingstr = 'if (' + wrappedname + '(' + ', '.join(self.arg)
                     for j in range(i):
                         callingstr += ', _a' + str(j)
                     callingstr += ') != '
@@ -140,7 +152,7 @@ class Func:
                     params = list(filter(lambda x: x != '', stripl[6:].split(' ')))
                     eqarg = params[0]
                     retarg = params[1]
-                    callingstr = 'if ((' + retarg + ' = ' + self.rawname + '(' + ', '.join(self.arg)
+                    callingstr = 'if ((' + retarg + ' = ' + wrappedname + '(' + ', '.join(self.arg)
                     for j in range(i):
                         callingstr += ', _a' + str(j)
                     callingstr += ')) == '
@@ -152,10 +164,10 @@ class Func:
                     retlines.append(retarg + ';')
                     continue
                 if stripl.startswith('@retneq'):
-                    params = list(filter(lambda x: x != '', stripl[6:].split(' ')))
+                    params = list(filter(lambda x: x != '', stripl[7:].split(' ')))
                     eqarg = params[0]
                     retarg = params[1]
-                    callingstr = 'if ((' + retarg + ' = ' + self.rawname + '(' + ', '.join(self.arg)
+                    callingstr = 'if ((' + retarg + ' = ' + wrappedname + '(' + ', '.join(self.arg)
                     for j in range(i):
                         callingstr += ', _a' + str(j)
                     callingstr += ')) != '
@@ -210,6 +222,8 @@ def read_func(text, pos):
         l = text[pos]
         if l.startswith('@type'):
             f.t = l[5:].strip()
+        if l.startswith('@wrap'):
+            f.needwrap = True
         if l.startswith('@name'):
             f.rawname = l[5:].strip()
             f.name = f.rawname.capitalize()
@@ -226,6 +240,14 @@ def read_func(text, pos):
         pos += 1
     return (pos, f)
 
+def read_topraw(text, pos):
+    f = []
+    pos += 1
+    while pos < len(text) and not text[pos].strip().startswith('@end'):
+        f.append(text[pos])
+        pos += 1
+    return (pos, f)
+
 def read_next(text, pos):
     l = text[pos]
     if l.strip() == '':
@@ -239,6 +261,9 @@ def read_next(text, pos):
     if l.strip().startswith('@type'):
         pos, f = read_func(text, pos)
         return (pos + 1, 'func', f)
+    if l.strip().startswith('@topraw'):
+        pos, f = read_topraw(text, pos)
+        return (pos + 1, 'topraw', f)
 
 
 def main():

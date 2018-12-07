@@ -2,6 +2,10 @@ MODSRCDIR = .
 
 CXXFLAGS += -Wall -Werror -Wno-unused-value -Wno-unused-but-set-variable -Wno-unused-variable -std=c++17
 CXXFLAGS += -I$(SRCBASE)/include -I.
+CXXFLAGS += -Wl,--wrap,socket -Wl,--wrap,bind -Wl,--wrap,listen -Wl,--wrap,connect
+CXXFLAGS += -Wl,--wrap,accept -Wl,--wrap,read -Wl,--wrap,write -Wl,--wrap,close -Wl,--wrap,getaddrinfo
+LDFLAGS += -Wl,--wrap,socket -Wl,--wrap,bind -Wl,--wrap,listen -Wl,--wrap,connect
+LDFLAGS += -Wl,--wrap,accept -Wl,--wrap,read -Wl,--wrap,write -Wl,--wrap,close -Wl,--wrap,getaddrinfo
 
 ifeq ($(DEBUG), TRUE)
 	CXXFLAGS += -ggdb3 -O0

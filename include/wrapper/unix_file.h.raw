@@ -5,6 +5,14 @@
 @include <sys/stat.h>
 @include <dirent.h>
 
+@topraw
+extern "C" {
+    int __real_close(int fd);
+    ssize_t __real_write(int fd, const void *buf, size_t count);
+    ssize_t __real_read(int fd, void *buf, size_t count);
+}
+@end
+
 @type system
 @name open
 @arg path oflag
@@ -35,6 +43,7 @@
 @end
 
 @type system
+@wrap
 @name close
 @arg fd
 @body
@@ -52,6 +61,7 @@
 @end
 
 @type system
+@wrap
 @name read
 @arg fd buf nbytes
 @body
@@ -61,6 +71,7 @@
 @end
 
 @type system
+@wrap
 @name write 
 @arg fd buf nbytes
 @body
