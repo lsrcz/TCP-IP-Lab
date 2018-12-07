@@ -11,12 +11,12 @@ int main() {
     dev = addInterfaceWithIP("va", "172.16.175.202", "255.255.255.0");
     addRouterDev(dev);
 
-    int              fd  = __wrap_socket(AF_INET, SOCK_STREAM, 0);
+    int              fd  = socket(AF_INET, SOCK_STREAM, 0);
     struct addrinfo* res = nullptr;
-    __wrap_getaddrinfo("172.16.175.201", "7777", NULL, &res);
+    getaddrinfo("172.16.175.201", "7777", NULL, &res);
     assert(res != nullptr);
     sleep(3);
-    __wrap_connect(fd, res->ai_addr, sizeof(sockaddr_in));
+    connect(fd, res->ai_addr, sizeof(sockaddr_in));
 
     sleep(10);
 
