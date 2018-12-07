@@ -8,6 +8,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+extern "C" {
+
 /**
  * @see [POSIX.1-2017:socket](http://pubs.opengroup.org/onlinepubs/
  * 9699919799/functions/socket.html)
@@ -56,7 +58,7 @@ ssize_t __wrap_write(int fildes, const void* buf, size_t nbyte);
  * @see [POSIX.1-2017:close](http://pubs.opengroup.org/onlinepubs/
  * 9699919799/functions/close.html)
  */
-ssize_t __wrap_close(int fildes);
+int __wrap_close(int fildes);
 
 /**
  * @see [POSIX.1-2017:getaddrinfo](http://pubs.opengroup.org/onlinepubs/
@@ -64,4 +66,6 @@ ssize_t __wrap_close(int fildes);
  */
 int __wrap_getaddrinfo(const char* node, const char* service,
                        const struct addrinfo* hints, struct addrinfo** res);
+
+}
 #endif  // SOCKET_H
