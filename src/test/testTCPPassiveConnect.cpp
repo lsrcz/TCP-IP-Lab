@@ -19,6 +19,16 @@ int main() {
     bind(fd, res->ai_addr, sizeof(sockaddr_in));
     listen(fd, 1024);
     int fffd;
+    struct sockaddr_in ad;
+    socklen_t l = sizeof(sockaddr_in);
+    fffd = accept(fd, (sockaddr*)&ad, &l);
+    printf("\n\n accept %d \n\n", fffd);
+    printf(" port: %x\n", htonl16(ad.sin_port));
+    printf(" ip: %s\n", inet_ntoa(ad.sin_addr));
+    sleep(20);
+    for (int i = 0; i < 30; ++i)
+        printf("------------------ we will close -------------------\n");
+    close(fffd);
     /*while ((fffd = __wrap_accept(fd)> 0)
       printf("%d\n", fffd);*/
     pause();

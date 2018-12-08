@@ -62,6 +62,7 @@ int socketController::socket() {
         errno = ENOMEM;
         return -1;
     }
+    ret.first->second->fd = fd;
     return fd;
 }
 
@@ -149,6 +150,7 @@ int socketController::registerSocket(std::unique_ptr<socket_t> &&ptr) {
         errno = ENOMEM;
         return -1;
     }
+    ret.first->second->fd = fd;
     return fd;
 }
 
@@ -205,6 +207,21 @@ int socketController::close(int fd) {
     return 0;
 }
 
+int socketController::accept(int fd, struct sockaddr* address, socklen_t *addrlen) {
+    auto iter = fd2socket.find(fd);
+    if (iter == fd2socket.end()) {
+        errno = ENOTSOCK;
+        return -1;
+    }
+    if (addrlen == nullptr) {
+        errno = EINVAL;
+        return -1;
+    }
+    int ret = iter->second->accept((sockaddr_in*)address, *addrlen);
+    *addrlen = sizeof(sockaddr_in);
+    return ret;
+}
+
 bool socketController::isSocket(int fd) {
     auto iter = fd2socket.find(fd);
     return !(iter == fd2socket.end());
@@ -213,4 +230,14 @@ bool socketController::isSocket(int fd) {
 socketController::~socketController() {
     shouldStop = true;
     worker.join();
+}
+
+sockaddr_in socketController::getSocketPeerAddr(int fd) {
+    auto iter = fd2socket.find(fd);
+    sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    if (iter == fd2socket.end())
+        return addr;
+    addr = iter->second->dst;
+    return addr;
 }

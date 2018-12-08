@@ -60,6 +60,10 @@ int socket_t::listen(int backlog) {
         errno = EINVAL;
         return -1;
     }
+    if (backlog < 0) {
+        errno = EINVAL;
+        return -1;
+    }
 
     this->backlog = backlog;
     t.listen();
@@ -67,17 +71,24 @@ int socket_t::listen(int backlog) {
     return 0;
 }
 
-int socket_t::accept(struct sockaddr_in* addr) {
+int socket_t::accept(struct sockaddr_in* addr, socklen_t addrlen) {
     // no EAGAIN, EBADF, EFAULT, EINTR, EMFILE
-    std::lock_guard<std::mutex> lock(mu);
+    std::unique_lock<std::mutex> lock(mu);
     std::unique_lock            acclock(accmu);
     if (!listenFlag)
         return EINVAL;
     while (est_queue.empty()) {
+        lock.unlock();
         acccv.wait(acclock);
     }
+    lock.lock();
     int fd = est_queue.front();
     est_queue.pop_front();
+    struct sockaddr_in local_addr;
+    if (addr != nullptr) {
+        local_addr = sc.getSocketPeerAddr(fd);
+        memcpy(addr, &local_addr, addrlen);
+    }
     return fd;
 }
 
@@ -88,15 +99,31 @@ int socket_t::recv(const void* buf, int len) {
 int socket_t::genConnectFD(sockaddr_in src, sockaddr_in dst, tcpSeq rcv_nxt, tcpSeq irs) {
     auto ptr = std::make_unique<socket_t>(sc, src, dst);
     auto rawptr = ptr.get();
+    ptr->lock();
     ptr->father = this; // so, the child should be disabled early
     ptr->t.state = TCP_SYN_RECV;
     ptr->t.irs = irs;
     ptr->t.rcv_nxt = rcv_nxt;
     int fd = sc.registerSocket(std::move(ptr));
+    syn_queue.push_back(fd);
+    rawptr->unlock();
     rawptr->t.send(TH_ACK|TH_SYN);
     return fd;
 }
 
 int socket_t::close() {
     return t.close();
+}
+
+int socket_t::getFD() {
+    return fd;
+}
+
+int socket_t::notifyEstFather() {
+    if (father == nullptr)
+        return 0;
+    if (father->estQueueIsFull())
+        return -1;
+    father->moveConnFromSynToEst(fd);
+    return 0;
 }

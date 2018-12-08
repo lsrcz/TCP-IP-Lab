@@ -54,6 +54,11 @@ int __wrap_connect(int socket, const struct sockaddr* address,
     return socketController::getInstance().connect(socket, addrin);
 }
 
+int __wrap_accept(int socket, struct sockaddr* address, socklen_t *addrlen) {
+    int fd = socketController::getInstance().accept(socket, address, addrlen);
+    return fd;
+}
+
 int __wrap_close(int fd) {
     if (!socketController::getInstance().isSocket(fd))
         return __real_close(fd);

@@ -37,7 +37,9 @@ public:
     int bind(int socket, const struct sockaddr_in* addr);
     int listen(int socket, int backlog);
     int close(int fd);
+    int accept(int fd, struct sockaddr* address, socklen_t *addrlen);
     bool isSocket(int fd);
+    sockaddr_in getSocketPeerAddr(int fd);
     ~socketController();
 };
 
