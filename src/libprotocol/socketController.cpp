@@ -220,7 +220,7 @@ int socketController::read(int fd, void *buf, size_t nbyte) {
     return iter->second->read(buf, nbyte);
 }
 
-int socketController::write(int fd, void *buf, size_t nbyte) {
+int socketController::write(int fd, const void *buf, size_t nbyte) {
     auto iter = fd2socket.find(fd);
     if (iter == fd2socket.end()) {
         errno = EBADF;

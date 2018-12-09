@@ -30,6 +30,9 @@ class tcb {
     tcpBuffer               rcv_buf;
     tcpBuffer               snd_buf;
     tcpBuffer               snd_ctrl_buf;
+    std::mutex rtxmu;
+    std::condition_variable rtxcv;
+    std::list<tcpBufferWithTimeItem> rtx_buf;
     std::mutex              mu;
     std::condition_variable statecv;
     // only set once now
@@ -54,6 +57,7 @@ class tcb {
     uint64_t rcv_wnd;
 
     tcpSeq   seq_fin;
+    uint16_t mss;
 
     // sliding window
     std::mutex swmu;
@@ -65,10 +69,12 @@ class tcb {
     bool needACK = false;
 
     // transmit timing
-    float              t_srtt;
-    float              t_rto;
-    static const float alpha;
-    static const float beta;
+    double              srtt;
+    double              rto;
+    static const double alpha;
+    static const double beta;
+    static const double rtoubound;
+    static const double rtolbound;
 
     tcphdr getHdr(uint8_t flags);//, uint16_t win);
     int    setMSSOpt(uint8_t* buf);
@@ -76,18 +82,19 @@ class tcb {
     int    setWSOpt(uint8_t* buf, uint32_t ws);
     int    setEnd(uint8_t* buf);
     int setOption(uint8_t* buf, int flags, uint32_t acktimestamp, uint32_t ws);
-    int tcpCopyToBuf(uint8_t* buf, tcphdr t, uint8_t* option, int optlen,
-                     uint8_t* data, int len);
+    int tcpCopyToBuf(uint8_t* buf, tcphdr t, const uint8_t* option, int optlen,
+                     const uint8_t* data, int len);
     int tcpCopyToBuf(uint8_t* buf, tcphdr t, uint8_t* option, int optlen);
     int tcpCopyToBuf(uint8_t* buf, tcphdr t);
     uint64_t getWindowSize();
     int                 send(int type, uint32_t seq = 0);
-    int                 send(const tcpBufferItem& buf, int type);
+    int                 send(const void* buf, int len, uint32_t seq);
     int                 recv(const void* buf, int len);
     void sendCtrlBuf();
     void copyData(const uint8_t* buf, uint32_t len, uint32_t seq);
     void updateHole(uint32_t seq, uint32_t seq_end);
     int sendBuf();
+    void processACK(uint32_t ack);
 
 public:
     tcb(socket_t& socket);
@@ -97,7 +104,7 @@ public:
     int recv(void* buf, int len);
     int close();
     int abort();
-    int write(void *buf, size_t len);
+    int write(const void *buf, size_t len);
     int read(void *buf, size_t len);
 };
 

@@ -65,7 +65,7 @@ ssize_t __wrap_read(int fd, void *buf, size_t nbyte) {
     return socketController::getInstance().read(fd, buf, nbyte);
 }
 
-ssize_t __wrap_write(int fd, void *buf, size_t nbyte) {
+ssize_t __wrap_write(int fd, const void *buf, size_t nbyte) {
     if (!socketController::getInstance().isSocket(fd))
         return __real_write(fd, buf, nbyte);
     return socketController::getInstance().write(fd, buf, nbyte);

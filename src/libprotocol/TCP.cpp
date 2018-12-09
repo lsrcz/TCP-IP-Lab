@@ -8,18 +8,21 @@
 #include <utils/netutils.h>
 #include <utils/timeutils.h>
 
-const float tcb::alpha = 0.8;
-const float tcb::beta  = 1.4;
+const double tcb::alpha = 0.8;
+const double tcb::beta  = 1.4;
+const double tcb::rtoubound = 60000; // 1 min
+const double tcb::rtolbound = 1000; // 1 s
 
 tcb::tcb(socket_t& socket) : socket(socket) {
     memset(&src, 0, sizeof(src));
     memset(&dst, 0, sizeof(dst));
     state   = TCP_CLOSE;
-    iss     = getTimeStamp();
+    iss     = getTimeStamp() * 4;
     snd_una = snd_nxt = iss;
-    t_srtt            = 0;
-    t_rto             = 1;
+    srtt            = 0;
+    rto             = rtolbound;
     rcv_wnd = 0xffff;
+    mss = 1460;
 
     using namespace std::literals::chrono_literals;
     worker = std::thread([&]() {
@@ -60,7 +63,15 @@ tcb::tcb(socket_t& socket) : socket(socket) {
                            break; */
                         // acts as normal
                         // send piggy back
+                        sendCtrlBuf();
                         // TODO: send data
+                        sendBuf();
+                        if (needACK) {
+                            printf("  ACKKKK   \n");
+                            send(TH_ACK);
+                            needACK = false;
+                            sendCtrlBuf();
+                        }
                         sendCtrlBuf();
                         if (!snd_buf.have()) {
                             printf("53state: %d\n", state);
@@ -167,7 +178,7 @@ tcphdr tcb::getHdr(uint8_t flags) {
 int tcb::setMSSOpt(uint8_t* buf) {
     buf[0]                  = 0x02;
     buf[1]                  = 0x04;
-    *((uint16_t*)(&buf[2])) = htonl16(1460);
+    *((uint16_t*)(&buf[2])) = htonl16(_GLIBCXX_HAVE_LC_MESSAGES);
     return 4;
 }
 
@@ -210,15 +221,16 @@ int tcb::setOption(uint8_t* buf, int flags, uint32_t acktimestamp = 0,
         exit(0);
         }*/
     // no other options supported
-    b += setEnd(buf + b);
+    if (b != 0)
+        b += setEnd(buf + b);
     for (int i = b; i < (b + 3) / 4 * 4; ++i)
         buf[i] = 0;
     b = (b + 3) / 4 * 4;
     return b;
 }
 
-int tcb::tcpCopyToBuf(uint8_t* buf, tcphdr t, uint8_t* option, int optlen,
-                      uint8_t* data, int len) {
+int tcb::tcpCopyToBuf(uint8_t* buf, tcphdr t, const uint8_t* option, int optlen,
+                      const uint8_t* data, int len) {
     tcphdr* hdr        = (tcphdr*)buf;
     int     tot_optlen = (optlen + 3) / 4 * 4;
     int     tot_len    = sizeof(t) + tot_optlen + len;
@@ -289,13 +301,61 @@ int tcb::send(int seg_type, uint32_t seq /* for rst, network*/) {
     // return sendIPPacket(src.sin_addr, dst.sin_addr, IPPROTO_TCP, buf, totlen);
 }
 
-int tcb::send(const tcpBufferItem& buf, int type) {
-    return 1;
+int tcb::send(const void* buf, int len, uint32_t seq /* not network */) {
+    uint8_t sendBuf[2000]; // always enough since we won't send TCP segments longer
+    // than MSS, and MSS is limited.
+    uint8_t optbuf[200];
+    tcphdr hdr = getHdr(TH_ACK);
+    hdr.th_seq = htonl32(seq);
+    int optlen = setOption(optbuf, TO_TS, 0, 0);
+    int totlen = tcpCopyToBuf(sendBuf, hdr, optbuf, optlen, (uint8_t*)buf, len);
+    return sendIPPacket(src.sin_addr, dst.sin_addr, IPPROTO_TCP, sendBuf, totlen);
 }
 
 int tcb::sendBuf() {
+    uint64_t lastchk = 0;
+    uint64_t newchk;
     while (snd_buf.have()) {
-        break;
+        std::unique_lock<std::mutex> lock(rtxmu);
+        newchk = getTimeStamp();
+        if (newchk <= lastchk + 2 * srtt) {// if more than a srtt, recheck rtx buf
+            lastchk = newchk;
+            goto skip;
+        }
+        for (auto & b : rtx_buf) {
+            //if (snd_wnd == 0)
+            //    printf("zero window\n");
+            uint64_t t = getTimeStamp();
+            if (b.lastSendTime + rto * b.p < t) {
+                // retransmission
+                b.lastSendTime = t;
+                b.retransCount++;
+                b.p *= 2;
+                send(b.buf, b.len, b.seq);
+            }
+        }
+    skip:
+        if (snd_nxt >= snd_una + snd_wnd) {
+            if (snd_wnd == 0) {
+            static bool a = true;
+            if (a) {
+                printf("snd_nxt: %d\n", (uint32_t)snd_nxt);
+                printf("snd_una: %d\n", (uint32_t)snd_una);
+                printf("snd_wnd: %ld\n", snd_wnd);
+                a = false;
+            }
+            }
+            return 0;
+        }
+        printf("ok to send\n");
+        printf("snd_nxt: %d\n", (uint32_t)snd_nxt);
+        printf("snd_una: %d\n", (uint32_t)snd_una);
+        printf("snd_wnd: %ld\n", snd_wnd);
+        tcpBufferItem i = snd_buf.get();
+        rtx_buf.emplace_back(i.buf, i.len, snd_nxt, getTimeStamp());
+        send(i.buf, i.len, snd_nxt);
+        snd_nxt = snd_nxt + i.len;
+        needACK = false;
     }
     return 0;
 }
@@ -315,11 +375,14 @@ int tcb::connect() {
     while (state == TCP_SYN_SENT || state == TCP_SYN_RECV) {
         if (x == end(gap))
             return ETIMEDOUT;
-        statecv.wait_for(lock, *x);
+        statecv.wait_for(lock, *x, [&](){
+                return state != TCP_SYN_SENT && state != TCP_SYN_RECV;
+            });
         if (state != TCP_SYN_SENT && state != TCP_SYN_RECV)
             break;
         printf("                            %ld                   \n", x - begin(gap));
         snd_nxt = snd_nxt - 1;
+        printf("SYN retransmission\n");
         send(TH_SYN);
         statecv.notify_all();
         x++;
@@ -335,13 +398,20 @@ int tcb::connect() {
     return 0;
 }
 
-int tcb::write(void *buf, size_t nbyte) {
+int tcb::write(const void *buf, size_t nbyte) {
     std::lock_guard<std::mutex> lock(mu);
+    // TODO: sent no mss know
     if (state == TCP_SYN_SENT ||
                state == TCP_SYN_RECV ||
                state == TCP_ESTABLISHED ||
                state == TCP_CLOSE_WAIT) {
-        snd_buf.put((uint8_t*)buf, nbyte);
+        size_t pos = 0;
+        for (; pos + mss <= nbyte; pos += mss) {
+            snd_buf.put((uint8_t*)buf + pos, mss);
+        }
+        if (pos + mss == nbyte)
+            return 0;
+        snd_buf.put((uint8_t*)buf + pos, nbyte - pos);
         return 0;
     } else {
         errno = ENOTCONN;
@@ -453,6 +523,11 @@ int tcb::recv(const void* buf, int len) {
                 state = TCP_SYN_RECV;
                 send(TH_ACK);
             }
+            if (hdr->th_flags & TH_ACK) {
+                snd_wnd = htonl16(hdr->th_win);
+                snd_wl1 = htonl32(hdr->th_seq);
+                snd_wl2 = htonl32(hdr->th_ack);
+            }
         }
     } else if (state == TCP_LISTEN) {
         // for listenfd
@@ -535,10 +610,16 @@ int tcb::recv(const void* buf, int len) {
         // fifth, check the ACK field
         if (hdr->th_flags & TH_ACK) {
             uint32_t ack = htonl32(hdr->th_ack);
+            printf("ACK %u recv \n", ack);
             uint32_t seq = htonl32(hdr->th_seq);
             uint16_t win = htonl16(hdr->th_win);
             if (state == TCP_SYN_RECV) {
                 if (snd_una <= ack && ack <= snd_nxt) {
+                    if (hdr->th_flags & TH_ACK) {
+                        snd_wnd = htonl16(hdr->th_win);
+                        snd_wl1 = htonl32(hdr->th_seq);
+                        snd_wl2 = htonl32(hdr->th_ack);
+                    }
                     if (socket.notifyEstFather() < 0)
                         return 0;
                     state = TCP_ESTABLISHED;
@@ -547,11 +628,13 @@ int tcb::recv(const void* buf, int len) {
                     return 0;
                 }
             } else if (state == TCP_ESTABLISHED || state == TCP_FIN_WAIT1 || state == TCP_FIN_WAIT2 || state == TCP_CLOSE_WAIT || state == TCP_CLOSING) {
-                if (snd_una < ack && ack <= snd_nxt) {
-                    snd_una = ack;
+                printf("ACK %u recv \n", ack);
+                if (snd_una <= ack && ack <= snd_nxt) {
                     // TODO: remove unacknowledged
                     // removeUnack();
+                    processACK(ack);
                     if (snd_wl1 < seq || (snd_wl1 == seq && snd_wl2 <= ack)) {
+                        printf("Window update: %d\n", win);
                         snd_wnd = win;
                         snd_wl1 = seq;
                         snd_wl2 = ack;
@@ -772,4 +855,39 @@ void tcb::sendCtrlBuf() {
         auto bi = snd_ctrl_buf.get();
         sendIPPacket(src.sin_addr, dst.sin_addr, IPPROTO_TCP, bi.buf, bi.len);
     }
+}
+
+void tcb::processACK(uint32_t ack) {
+    printf("ACK %u recv \n", ack);
+    std::lock_guard<std::mutex> lock(rtxmu);
+    snd_una = ack;
+    if (rtx_buf.empty())
+        return;
+    printf("ACK %u recv \n", ack);
+    auto iter = rtx_buf.begin();
+    auto iternxt = std::next(iter);
+    bool lasttime = false;
+    while (true) {
+        if (iternxt == rtx_buf.end())
+            lasttime = true;
+        tcpBufferWithTimeItem &t = *iter;
+        printf("p: %u, %d, %d\n", (uint32_t)t.seq, t.len, ack);
+        if (t.seq + t.len == ack) {
+            /// TODO: cal RTT
+            uint64_t rtt = getTimeStamp() - t.firstSendTime;
+            srtt = (alpha * srtt) + (1 - alpha * rtt);
+            rto = std::min(rtoubound, std::max(rtolbound, beta * srtt));
+            printf("remove: %u, %d, %d\n", (uint32_t)t.seq, t.len, ack);
+            rtx_buf.erase(iter);
+        } else if (t.seq + t.len <= ack) {
+            printf("remove: %u, %d, %d\n", (uint32_t)t.seq, t.len, ack);
+            rtx_buf.erase(iter);
+        }
+        if (lasttime)
+            break;
+        iter = iternxt;
+        iternxt = std::next(iter);
+    }
+
+    rtxcv.notify_all();
 }

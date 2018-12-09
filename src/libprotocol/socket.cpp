@@ -112,7 +112,7 @@ int socket_t::genConnectFD(sockaddr_in src, sockaddr_in dst, tcpSeq rcv_nxt, tcp
     return fd;
 }
 
-int socket_t::write(void *buf, size_t nbyte) {
+int socket_t::write(const void *buf, size_t nbyte) {
     if (isListen()) {
         errno = ENOTCONN;
         return -1;
