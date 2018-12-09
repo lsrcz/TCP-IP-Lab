@@ -59,6 +59,18 @@ int __wrap_accept(int socket, struct sockaddr* address, socklen_t *addrlen) {
     return fd;
 }
 
+ssize_t __wrap_read(int fd, void *buf, size_t nbyte) {
+    if (!socketController::getInstance().isSocket(fd))
+        return __real_read(fd, buf, nbyte);
+    return socketController::getInstance().read(fd, buf, nbyte);
+}
+
+ssize_t __wrap_write(int fd, void *buf, size_t nbyte) {
+    if (!socketController::getInstance().isSocket(fd))
+        return __real_write(fd, buf, nbyte);
+    return socketController::getInstance().write(fd, buf, nbyte);
+}
+
 int __wrap_close(int fd) {
     if (!socketController::getInstance().isSocket(fd))
         return __real_close(fd);

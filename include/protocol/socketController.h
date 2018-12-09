@@ -38,6 +38,8 @@ public:
     int listen(int socket, int backlog);
     int close(int fd);
     int accept(int fd, struct sockaddr* address, socklen_t *addrlen);
+    int write(int fd, void *buf, size_t nbyte);
+    int read(int fd, void *buf, size_t nbyte);
     bool isSocket(int fd);
     sockaddr_in getSocketPeerAddr(int fd);
     ~socketController();

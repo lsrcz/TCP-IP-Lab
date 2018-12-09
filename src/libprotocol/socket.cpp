@@ -104,11 +104,36 @@ int socket_t::genConnectFD(sockaddr_in src, sockaddr_in dst, tcpSeq rcv_nxt, tcp
     ptr->t.state = TCP_SYN_RECV;
     ptr->t.irs = irs;
     ptr->t.rcv_nxt = rcv_nxt;
+    ptr->t.bufferBegin = rcv_nxt;
     int fd = sc.registerSocket(std::move(ptr));
     syn_queue.push_back(fd);
     rawptr->unlock();
     rawptr->t.send(TH_ACK|TH_SYN);
     return fd;
+}
+
+int socket_t::write(void *buf, size_t nbyte) {
+    if (isListen()) {
+        errno = ENOTCONN;
+        return -1;
+    }
+    if (isReset()) {
+        errno = ECONNRESET;
+        return -1;
+    }
+    return t.write(buf, nbyte);
+}
+
+int socket_t::read(void *buf, size_t nbyte) {
+    if (isListen()) {
+        errno = ENOTCONN;
+        return -1;
+    }
+    if (isReset()) {
+        errno = ECONNRESET;
+        return -1;
+    }
+    return t.read(buf, nbyte);
 }
 
 int socket_t::close() {

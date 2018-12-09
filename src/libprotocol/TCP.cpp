@@ -22,103 +22,131 @@ tcb::tcb(socket_t& socket) : socket(socket) {
     rcv_wnd = 0xffff;
 
     using namespace std::literals::chrono_literals;
-    sndTimer.setPeriodTimer(20ms, [&]() {
-            sendCtrlBuf();
-            {
-                std::unique_lock<std::mutex> lock1(mu);
-                if (state == TCP_TIME_WAIT) {
-                    while (statecv.wait_for(lock1, 240s) == std::cv_status::no_timeout);
-                    state = TCP_CLOSE;
-                    socket.setClose(true);
-                }
-                if (state == TCP_CLOSE || state == TCP_CLOSING)
-                    statecv.wait_for(lock1, 10s); // shouldn't spin
-                if (state == TCP_FIN_WAIT2) {
-                    sendCtrlBuf();
-                    statecv.wait_for(lock1, 60s);
-                    state = TCP_TIME_WAIT;
-                    return;
-                }
+    worker = std::thread([&]() {
+            std::unique_lock<std::mutex> lock(timermu);
+            while (!shouldStop) {
+                timercv.wait_for(lock, 20ms);
+                // sndTimer.setPeriodTimer(20ms, [&]() {
                 sendCtrlBuf();
-            }
-            if (reset) {
-                return;
-            } if (activeClose) {
-                while (true) {
-                    std::unique_lock<std::mutex> lock(mu); // block all
-                    /* if (state != TCP_ && state != TCP_CLOSE_WAIT && state != TCP_SYN_RECV)
-                       break; */
-                    // acts as normal
-                    // send piggy back
-                    // TODO: send data
+                {
+                    std::unique_lock<std::mutex> lock1(mu);
+                    if (state == TCP_TIME_WAIT) {
+                        sendCtrlBuf();
+                        while (statecv.wait_for(lock1, 240s) == std::cv_status::no_timeout);
+                        state = TCP_CLOSE;
+                        swcv.notify_all();
+                        socket.setClose(true);
+                    }
+                    if (state == TCP_CLOSE || state == TCP_CLOSING) {
+                        sendCtrlBuf();
+                        statecv.wait_for(lock1, 1s); // shouldn't spin
+                    }
+                    if (state == TCP_FIN_WAIT2) {
+                        sendCtrlBuf();
+                        statecv.wait_for(lock1, 60s);
+                        state = TCP_TIME_WAIT;
+                        swcv.notify_all();
+                        goto endloop;
+                    }
                     sendCtrlBuf();
-                    if (!snd_buf.have()) {
-                        printf("53state: %d\n", state);
-                        printf("IN\n");
-                        //if (state == TCP_ESTABLISHED || state == TCP_SYN_RECV) {
-                        if (state == TCP_FIN_WAIT1) {
-                            printf("FIN_WAIT1\n");
-                            state = TCP_FIN_WAIT1;
-                            decltype(1s) wait_time[] = { 1s, 1s, 2s, 4s, 8s };
-                            int i = 0;
-                            while (state == TCP_FIN_WAIT1) {
-                                seq_fin = snd_nxt;
-                                if (i != 0)
-                                    snd_nxt = snd_nxt - 1;
-                                send(TH_FIN);
-                                sendCtrlBuf();
-                                statecv.wait_for(lock, wait_time[i]);
-                                // on an real Linux machine, it may retransmit the FIN, but it can
-                                // also be configured to not retransmit it
-                                // the behavior is not specified in RFC793
-                                // the orphan
-                                i++;
-                                printf("73state: %d\n", state);
-                                if (i == 5) {
-                                    state = TCP_CLOSE;
-                                    socket.setClose(true);
-                                    return;
+                }
+                if (reset) {
+                    goto endloop;
+                } if (activeClose) {
+                    while (true) {
+                        std::unique_lock<std::mutex> lock(mu); // block all
+                        /* if (state != TCP_ && state != TCP_CLOSE_WAIT && state != TCP_SYN_RECV)
+                           break; */
+                        // acts as normal
+                        // send piggy back
+                        // TODO: send data
+                        sendCtrlBuf();
+                        if (!snd_buf.have()) {
+                            printf("53state: %d\n", state);
+                            printf("IN\n");
+                            //if (state == TCP_ESTABLISHED || state == TCP_SYN_RECV) {
+                            if (state == TCP_FIN_WAIT1) {
+                                printf("FIN_WAIT1\n");
+                                state = TCP_FIN_WAIT1;
+                                decltype(1s) wait_time[] = { 1s, 1s, 2s, 4s, 8s };
+                                int i = 0;
+                                while (state == TCP_FIN_WAIT1) {
+                                    seq_fin = snd_nxt;
+                                    if (i != 0)
+                                        snd_nxt = snd_nxt - 1;
+                                    send(TH_FIN);
+                                    sendCtrlBuf();
+                                    statecv.wait_for(lock, wait_time[i]);
+                                    // on an real Linux machine, it may retransmit the FIN, but it can
+                                    // also be configured to not retransmit it
+                                    // the behavior is not specified in RFC793
+                                    // the orphan
+                                    i++;
+                                    printf("73state: %d\n", state);
+                                    if (i == 5) {
+                                        state = TCP_CLOSE;
+                                        socket.setClose(true);
+                                        swcv.notify_all();
+                                        goto endloop;
+                                    }
                                 }
-                            }
-                            return;
+                                goto endloop;
 
-                            //} else if (state == TCP_CLOSE_WAIT) {
-                        } else if (state == TCP_LAST_ACK) {
-                            state = TCP_LAST_ACK;
-                            decltype(1s) wait_time[] = { 1s, 1s, 2s, 4s, 8s };
-                            int i = 0;
-                            while (state == TCP_LAST_ACK) {
-                                seq_fin = snd_nxt;
-                                if (i != 0)
-                                    snd_nxt = snd_nxt - 1;
-                                send(TH_FIN);
-                                sendCtrlBuf();
-                                statecv.wait_for(lock, wait_time[i]);
-                                i++;
-                                if (i == 5) {
-                                    state = TCP_CLOSE;
-                                    socket.setClose(true);
-                                    return;
+                                //} else if (state == TCP_CLOSE_WAIT) {
+                            } else if (state == TCP_LAST_ACK) {
+                                state = TCP_LAST_ACK;
+                                swcv.notify_all();
+                                decltype(1s) wait_time[] = { 1s, 1s, 2s, 4s, 8s };
+                                int i = 0;
+                                while (state == TCP_LAST_ACK) {
+                                    seq_fin = snd_nxt;
+                                    if (i != 0)
+                                        snd_nxt = snd_nxt - 1;
+                                    send(TH_FIN);
+                                    sendCtrlBuf();
+                                    statecv.wait_for(lock, wait_time[i]);
+                                    i++;
+                                    if (i == 5) {
+                                        state = TCP_CLOSE;
+                                        socket.setClose(true);
+                                        swcv.notify_all();
+                                        goto endloop;
+                                    }
                                 }
+                                goto endloop;
                             }
-                            return;
                         }
                     }
+                    sendCtrlBuf();
+                } else if (passiveClose) {
+                    std::unique_lock<std::mutex> lock(mu); // block all
+                    sendCtrlBuf();
+                    statecv.wait(lock);
+                    sendCtrlBuf();
+                    printf("116state: %d\n", state);
+                } else {
+                    sendCtrlBuf();
+                    if (needACK) {
+                        printf("  ACKKKK   \n");
+                        send(TH_ACK);
+                        needACK = false;
+                        sendCtrlBuf();
+                    }
                 }
-                sendCtrlBuf();
-            } else if (passiveClose) {
-                std::unique_lock<std::mutex> lock(mu); // block all
-                sendCtrlBuf();
-                statecv.wait(lock);
-                sendCtrlBuf();
-                printf("116state: %d\n", state);
-            } else {
-                sendCtrlBuf();
+            endloop:
+                int dummy;
             }
         });
 }
 
-tcphdr tcb::getHdr(uint8_t flags, uint16_t win) {
+tcb::~tcb() {
+    shouldStop = 1;
+    statecv.notify_all();
+    timercv.notify_all();
+    worker.join();
+}
+
+tcphdr tcb::getHdr(uint8_t flags) {
     tcphdr hdr;
     memset(&hdr, 0, sizeof(hdr));
     hdr.th_sport = src.sin_port;
@@ -128,7 +156,8 @@ tcphdr tcb::getHdr(uint8_t flags, uint16_t win) {
     hdr.th_ack   = htonl32(rcv_nxt);
     hdr.th_off   = 0;  // should be filled by tcp_cp
     hdr.th_flags = flags;
-    hdr.th_win   = win;
+    hdr.th_win   = htonl16(rcv_wnd);
+    // printf("getHdr:   %u\n", (uint32_t)hdr.th_win)
     hdr.th_urp   = 0;  // won't implement
     return hdr;
 }
@@ -210,32 +239,35 @@ int tcb::tcpCopyToBuf(uint8_t* buf, tcphdr t) {
     return tcpCopyToBuf(buf, t, NULL, 0);
 }
 
-std::pair<int, int> tcb::getWindowSize() {
-    snd_wnd = 65535 << 6;
-    return std::make_pair(65535, 6);
+uint64_t tcb::getWindowSize() {
+    // snd_wnd = 65535 << 6;
+    // return std::make_pair(65535, 6);
+    return rcv_wnd;
 }
 
 int tcb::send(int seg_type, uint32_t seq /* for rst, network*/) {
     // syn ack rst
     uint8_t buf[200];
     uint8_t optbuf[200];
-    auto    ws     = getWindowSize();
+    // auto    ws     = getWindowSize();
     tcphdr hdr;
     if (seg_type == TH_FIN)
-        hdr = getHdr(TH_FIN | TH_ACK, ws.first);
+        hdr = getHdr(TH_FIN | TH_ACK);
+    // hdr = getHdr(TH_FIN | TH_ACK, ws);
     else
-        hdr = getHdr(seg_type, ws.first);
+        hdr = getHdr(seg_type);
+    //hdr = getHdr(seg_type, ws);
     int     optlen = 0;
     int     snd_n  = 0;
     if (seg_type == TH_SYN) {
         hdr.th_ack = 0;
         snd_n      = 1;
-        optlen     = setOption(optbuf, TO_MSS | TO_TS, 0, ws.second);
+        optlen     = setOption(optbuf, TO_MSS | TO_TS, 0, 0);
     } else if (seg_type == (TH_SYN | TH_ACK)) {
         snd_n  = 1;
-        optlen = setOption(optbuf, TO_MSS | TO_TS, 0, ws.second);
+        optlen = setOption(optbuf, TO_MSS | TO_TS, 0, 0);
     } else if (seg_type == TH_ACK) {
-        optlen = setOption(optbuf, TO_TS, 0, ws.second);
+        optlen = setOption(optbuf, TO_TS, 0, 0);
     } else if (seg_type == TH_RST) {
         hdr.th_seq = seq;
         hdr.th_ack = rcv_nxt;
@@ -293,6 +325,72 @@ int tcb::connect() {
     return 0;
 }
 
+int tcb::write(void *buf, size_t nbyte) {
+    std::lock_guard<std::mutex> lock(mu);
+    if (state == TCP_SYN_SENT ||
+               state == TCP_SYN_RECV ||
+               state == TCP_ESTABLISHED ||
+               state == TCP_CLOSE_WAIT) {
+        snd_buf.put((uint8_t*)buf, nbyte);
+        return 0;
+    } else {
+        errno = ENOTCONN;
+        return -1;
+    }
+}
+
+int tcb::read(void *buf, size_t nbyte) {
+    // TODO: fin case not handled
+    std::unique_lock<std::mutex> lock1(swmu);
+    if (state == TCP_CLOSE ||
+        state == TCP_CLOSING ||
+        state == TCP_LAST_ACK ||
+        state == TCP_TIME_WAIT) {
+        errno = ENOTCONN;
+        return -1;
+    }
+    if (state == TCP_CLOSE_WAIT)
+        goto closewait;
+    if ((uint32_t)rcv_nxt - bufferBegin >= nbyte) {
+        // ok to read
+        goto ok;
+    } else {
+        swcv.wait(lock1, [&](){
+                if (state == TCP_CLOSE ||
+                    state == TCP_CLOSE_WAIT ||
+                    state == TCP_CLOSING ||
+                    state == TCP_LAST_ACK ||
+                    state == TCP_TIME_WAIT)
+                    return true;
+                return (uint32_t)rcv_nxt - bufferBegin >= nbyte;
+            });
+        if (state == TCP_CLOSE_WAIT) {
+            goto closewait;
+        }
+        if (state == TCP_CLOSING || state == TCP_LAST_ACK || state == TCP_TIME_WAIT) {
+            errno = ENOTCONN;
+            return -1;
+        }
+        goto ok;
+    }
+ closewait:
+    if (bufferBegin == rcv_nxt - 1) {
+        errno = ENOTCONN;
+        return -1;
+    }
+    if ((uint32_t)rcv_nxt - 1 - bufferBegin <= nbyte)
+        nbyte = rcv_nxt - 1 - bufferBegin;
+ ok:
+    std::copy_n(data.begin(), nbyte, (uint8_t*)buf);
+    for (size_t i = 0; i < nbyte; ++i) {
+        data.pop_front();
+        valid.pop_front();
+    }
+    bufferBegin = bufferBegin + nbyte;
+    rcv_wnd = rcv_wnd + nbyte;
+    return nbyte;
+}
+
 int tcb::listen() {
     std::lock_guard<std::mutex> lock(mu);
     assert(state == TCP_CLOSE);
@@ -302,6 +400,7 @@ int tcb::listen() {
 
 int tcb::recv(const void* buf, int len) {
     std::unique_lock<std::mutex> lock(mu);
+    std::lock_guard<std::mutex> lock1(swmu);
     printf("state: %d\n", state);
     const ip*                   iphdr = (const ip*)buf;
     uint8_t                     iphl  = iphdr->ip_hl;
@@ -324,6 +423,7 @@ int tcb::recv(const void* buf, int len) {
                 state = TCP_CLOSE;
                 socket.setReset(true);
                 reset = 1;
+                swcv.notify_all();
                 statecv.notify_all();
                 return 0;
             }
@@ -332,6 +432,7 @@ int tcb::recv(const void* buf, int len) {
             return 0;
         if (hdr->th_flags & TH_SYN) {
             rcv_nxt = htonl32(hdr->th_seq) + 1;
+            bufferBegin = rcv_nxt;
             irs     = htonl32(hdr->th_seq);
             if (hdr->th_flags & TH_ACK)
                 snd_una = htonl32(hdr->th_ack);
@@ -406,6 +507,7 @@ int tcb::recv(const void* buf, int len) {
             state = TCP_CLOSE;
             reset = 1;
             socket.setReset(true);
+            swcv.notify_all();
             return 0;
         }
 
@@ -416,6 +518,7 @@ int tcb::recv(const void* buf, int len) {
             reset = 1;
             socket.setReset(true);
             flush = 1;
+            swcv.notify_all();
             return 0;
         }
 
@@ -446,14 +549,17 @@ int tcb::recv(const void* buf, int len) {
                     if (state == TCP_FIN_WAIT1) {
                         if (ack == seq_fin + 1) {
                             state = TCP_FIN_WAIT2;
-                            if (hdr->th_flags & TH_FIN)
+                            if (hdr->th_flags & TH_FIN) {
                                 state = TCP_CLOSING;
+                                swcv.notify_all();
+                            }
                             statecv.notify_all();
                         }
                     }
                     if (state == TCP_CLOSING) {
                         if (ack == seq_fin + 1) {
                             state = TCP_TIME_WAIT;
+                            swcv.notify_all();
                             statecv.notify_all();
                         }
                     }
@@ -465,6 +571,7 @@ int tcb::recv(const void* buf, int len) {
                 if (ack == seq_fin + 1) {
                     state = TCP_CLOSE;
                     socket.setClose(true);
+                    swcv.notify_all();
                     statecv.notify_all();
                 }
             } else if (state == TCP_TIME_WAIT) {
@@ -475,23 +582,40 @@ int tcb::recv(const void* buf, int len) {
             return 0;
         }
 
+
+        printf("segmentlen: %u\n", segmentlen);
+        // process the segment text
+        if (state == TCP_ESTABLISHED ||
+            state == TCP_FIN_WAIT1 ||
+            state == TCP_FIN_WAIT2) {
+            if (segmentlen != 0 && !(hdr->th_flags & TH_FIN)) {
+                copyData(data, segmentlen, seq);
+                needACK = true;
+                statecv.notify_all();
+            }
+        }
         if (hdr->th_flags & TH_FIN) {
             rcv_nxt += 1;
         }
-        // TODO: process the segment text
+
+
         if (hdr->th_flags & TH_FIN) {
             if (state == TCP_CLOSE || state == TCP_LISTEN || state == TCP_SYN_SENT)
                 return 0;
             if (state == TCP_SYN_RECV || state == TCP_ESTABLISHED) {
+                printf("FIN received\n");
                 passiveClose = 1;
                 send(TH_ACK);
                 state = TCP_CLOSE_WAIT;
+                swcv.notify_all();
                 statecv.notify_all();
             } else if (state == TCP_FIN_WAIT1) {
                 // before
             } else if (state == TCP_FIN_WAIT2) {
+                printf("---should ack---");
                 send(TH_ACK);
                 state = TCP_TIME_WAIT;
+                swcv.notify_all();
                 statecv.notify_all();
             } else if (state == TCP_TIME_WAIT) {
                 statecv.notify_all();
@@ -499,8 +623,92 @@ int tcb::recv(const void* buf, int len) {
                 // do nothing
             }
         }
+        printf("finish\n");
     }
     return 0;
+}
+
+void tcb::updateHole(uint32_t seq, uint32_t seq_end) {
+    if (hole.empty())
+        return;
+    auto iter = hole.begin();
+    auto iternxt = std::next(iter);
+    while (true) {
+        auto &h = *iter;
+        if (h.second <= seq)
+            goto nextiter;
+        if (h.first >= seq_end)
+            break;
+        if (h.first < seq) {
+            if (h.second <= seq_end) {
+                h.second = seq;
+            } else if (h.second > seq_end) {
+                hole.insert(iternxt, std::make_pair(seq_end, h.second));
+                h.second = seq;
+            }
+        } else {
+            if (h.second <= seq_end) {
+                hole.erase(iter);
+            } else if (h.second > seq_end) {
+                h.first = seq_end;
+            }
+        }
+    nextiter:
+        iter = iternxt;
+        if (iter == hole.end())
+            break;
+        iternxt = std::next(iter);
+    }
+}
+
+void tcb::copyData(const uint8_t* buf, uint32_t len, uint32_t seq) {
+    assert(len != 1);
+    uint32_t seq_end = seq + len;
+    uint32_t bbegin = bufferBegin;
+    uint32_t bend = bufferBegin + data.size();
+    uint32_t seqrel = seq - bbegin;
+    uint32_t seq_endrel = seq_end - bbegin;
+    updateHole(seq, seq_end);
+    if (seq_end <= bend) {
+        std::copy_n(buf, len, data.begin() + seqrel);
+        std::fill_n(valid.begin() + seqrel, len, 1);
+    } else if (seq >= bend) {
+        auto dataiter = std::back_inserter(data);
+        auto validiter = std::back_inserter(valid);
+        std::fill_n(dataiter, seq - bend, 0);
+        std::fill_n(validiter, seq - bend, 0);
+        std::copy_n(buf, len, dataiter);
+        std::fill_n(validiter, len, 1);
+        if (hole.empty() || hole.back().second != bend) {
+            if (bend != seq)
+                hole.push_back(std::make_pair(bend, seq));
+        } else {
+            hole.back().second = seq;
+        }
+    } else if (seq < bend && seq_end > bend) {
+        std::copy_n(buf, bend - seq, data.begin() + seqrel);
+        std::fill_n(valid.begin() + seq, bend - seq, 1);
+        auto dataiter = std::back_inserter(data);
+        auto validiter = std::back_inserter(valid);
+        std::copy_n(buf + bend - seq, seq_end - bend, dataiter);
+        std::fill_n(validiter, seq_end - bend, 1);
+    }
+    uint32_t old_rcv_nxt = rcv_nxt;
+    printf("Holes:\n");
+    for (auto &x : hole) {
+        printf("%u,%u\n", x.first, x.second);
+    }
+    if (hole.empty()) {
+        printf("%u, ", (uint32_t)rcv_nxt);
+        printf("%u, %lu\n", (uint32_t)bufferBegin, data.size());
+        rcv_nxt = bufferBegin + data.size();
+    } else {
+        rcv_nxt = hole.front().first;
+        printf("rcv_nxt: %u\n", (uint32_t)rcv_nxt);
+    }
+    if (rcv_nxt != old_rcv_nxt)
+        swcv.notify_all();
+    rcv_wnd = rcv_wnd + old_rcv_nxt - rcv_nxt;
 }
 
 int tcb::close() {
@@ -509,6 +717,7 @@ int tcb::close() {
         return -1;
     } else if (state == TCP_LISTEN || state == TCP_SYN_SENT ) {
         state = TCP_CLOSE;
+        swcv.notify_all();
         socket.setClose(true);
     } else if (state == TCP_SYN_RECV) {
         state = TCP_FIN_WAIT1;
@@ -522,6 +731,7 @@ int tcb::close() {
         return 0;
     } else if (state == TCP_CLOSE_WAIT) {
         state = TCP_LAST_ACK;
+        swcv.notify_all();
         activeClose = 1;
         statecv.notify_all();
     } else {

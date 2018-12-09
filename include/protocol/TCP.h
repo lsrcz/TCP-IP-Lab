@@ -12,12 +12,16 @@
 #include <thread>
 #include <utils/lockutils.h>
 #include <utils/timeutils.h>
+#include <list>
 
 class socket_t;
 class socketController;
 
 class tcb {
-    Timer sndTimer;
+    std::thread worker;
+    std::mutex timermu;
+    std::condition_variable timercv;
+    bool shouldStop = 0; // only used in destructor
 
     friend class socket_t;
     friend class socketController;
@@ -28,6 +32,8 @@ class tcb {
     tcpBuffer               snd_ctrl_buf;
     std::mutex              mu;
     std::condition_variable statecv;
+    // only set once now
+    // no need to protect
     int                     reset = 0;
     int                     activeClose = 0;
     int                     passiveClose = 0;
@@ -50,8 +56,13 @@ class tcb {
     tcpSeq   seq_fin;
 
     // sliding window
+    std::mutex swmu;
+    std::condition_variable_any swcv;
+    tcpSeq bufferBegin;
     std::deque<uint8_t> data;
     std::deque<uint8_t> valid;
+    std::list<std::pair<uint32_t, uint32_t>> hole;
+    bool needACK = false;
 
     // transmit timing
     float              t_srtt;
@@ -59,7 +70,7 @@ class tcb {
     static const float alpha;
     static const float beta;
 
-    tcphdr getHdr(uint8_t flags, uint16_t win);
+    tcphdr getHdr(uint8_t flags);//, uint16_t win);
     int    setMSSOpt(uint8_t* buf);
     int    setTSOpt(uint8_t* buf, uint32_t acktimestamp);
     int    setWSOpt(uint8_t* buf, uint32_t ws);
@@ -69,19 +80,24 @@ class tcb {
                      uint8_t* data, int len);
     int tcpCopyToBuf(uint8_t* buf, tcphdr t, uint8_t* option, int optlen);
     int tcpCopyToBuf(uint8_t* buf, tcphdr t);
-    std::pair<int, int> getWindowSize();
+    uint64_t getWindowSize();
     int                 send(int type, uint32_t seq = 0);
     int                 send(const tcpBufferItem& buf, int type);
     int                 recv(const void* buf, int len);
     void sendCtrlBuf();
+    void copyData(const uint8_t* buf, uint32_t len, uint32_t seq);
+    void updateHole(uint32_t seq, uint32_t seq_end);
 
 public:
     tcb(socket_t& socket);
+    ~tcb();
     int connect();
     int listen();
     int recv(void* buf, int len);
     int close();
     int abort();
+    int write(void *buf, size_t len);
+    int read(void *buf, size_t len);
 };
 
 enum TCPOPT : uint32_t { TO_MSS = 1, TO_TS = 2, TO_WS = 4, TO_SACK = 8 };

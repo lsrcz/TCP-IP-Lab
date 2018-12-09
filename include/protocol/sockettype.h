@@ -45,6 +45,8 @@ public:
     int recv(const void* buf, int len);
     int accept(sockaddr_in*addr, socklen_t len);
     int close();
+    int write(void *buf, size_t nbyte);
+    int read(void *buf, size_t nbyte);
     int genConnectFD(sockaddr_in src, sockaddr_in dst, tcpSeq rcv_nxt, tcpSeq irs);
     int getFD();
     int notifyEstFather();
