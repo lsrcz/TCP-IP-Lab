@@ -25,7 +25,8 @@ tcb::tcb(socket_t& socket) : socket(socket) {
     worker = std::thread([&]() {
             std::unique_lock<std::mutex> lock(timermu);
             while (!shouldStop) {
-                timercv.wait_for(lock, 20ms);
+                sendCtrlBuf();
+                timercv.wait_for(lock, 2ms);
                 // sndTimer.setPeriodTimer(20ms, [&]() {
                 sendCtrlBuf();
                 {
@@ -126,6 +127,7 @@ tcb::tcb(socket_t& socket) : socket(socket) {
                     printf("116state: %d\n", state);
                 } else {
                     sendCtrlBuf();
+                    sendBuf();
                     if (needACK) {
                         printf("  ACKKKK   \n");
                         send(TH_ACK);
@@ -282,12 +284,20 @@ int tcb::send(int seg_type, uint32_t seq /* for rst, network*/) {
     int totlen = tcpCopyToBuf(buf, hdr, optbuf, optlen);
     snd_nxt += snd_n;
     snd_ctrl_buf.put(buf, totlen);
+    timercv.notify_all();
     return 0;
     // return sendIPPacket(src.sin_addr, dst.sin_addr, IPPROTO_TCP, buf, totlen);
 }
 
 int tcb::send(const tcpBufferItem& buf, int type) {
     return 1;
+}
+
+int tcb::sendBuf() {
+    while (snd_buf.have()) {
+        break;
+    }
+    return 0;
 }
 
 int tcb::connect() {
@@ -592,6 +602,7 @@ int tcb::recv(const void* buf, int len) {
                 copyData(data, segmentlen, seq);
                 needACK = true;
                 statecv.notify_all();
+                timercv.notify_all();
             }
         }
         if (hdr->th_flags & TH_FIN) {

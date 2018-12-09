@@ -12,26 +12,28 @@ int main() {
 
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     struct addrinfo *res = nullptr;
-    getaddrinfo("172.16.176.202", "7233", NULL, &res);
+    getaddrinfo("172.16.176.202", "7279", NULL, &res);
     assert(res != nullptr);
     bind(fd, res->ai_addr, sizeof(sockaddr_in));
     freeaddrinfo(res);
 
 
 
-    getaddrinfo("172.16.176.201", "7228", NULL, &res);
+    getaddrinfo("172.16.176.201", "7269", NULL, &res);
     assert(res != nullptr);
 
     sleep(3);
     connect(fd, res->ai_addr, sizeof(sockaddr_in));
 
     uint8_t buffer[1000];
-    for (int i = 0; i < 66; ++i) {
+    for (int j = 0; j < 100; ++j) {
+    for (int i = 0; i < 1000; ++i) {
         printf("i: %d\n", i);
         printf("rd: %lu\n", read(fd, buffer, 1000));
         printf("buf: %d\n", buffer[0]);
         printf("buf: %d\n", buffer[1]);
         assert(buffer[0] == (uint8_t)(i * 1000));
+    }
     }
 
     pause();

@@ -45,8 +45,9 @@ int FrameDispatcher::processFrame(const void* frame, int len, int id) {
     }
 
     char buf[200];
-    if (len >= ETHER_MAX_LEN)
-        return -2;
+    // wtf...
+    // if (len >= ETHER_MAX_LEN)
+    //     return -2;
     uint16_t ether_type = htonl16(((struct ether_header*)frame)->ether_type);
     if (callbacks.find(ether_type) == callbacks.end()) {
         return -2;

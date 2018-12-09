@@ -87,6 +87,7 @@ class tcb {
     void sendCtrlBuf();
     void copyData(const uint8_t* buf, uint32_t len, uint32_t seq);
     void updateHole(uint32_t seq, uint32_t seq_end);
+    int sendBuf();
 
 public:
     tcb(socket_t& socket);
