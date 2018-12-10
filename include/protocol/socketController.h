@@ -9,6 +9,7 @@
 
 class socket_t;
 class socketController {
+    bool shouldComputeChecksum = true;
     std::set<sockaddr_in>   listeningSet;
     std::set<sockaddr_in>   connectedSet;
     int                     nxtport = 16384;
@@ -42,7 +43,16 @@ public:
     int read(int fd, void *buf, size_t nbyte);
     bool isSocket(int fd);
     sockaddr_in getSocketPeerAddr(int fd);
+    void cleanup();
     ~socketController();
+    inline
+    void disableChecksum() {
+        shouldComputeChecksum = false;
+    }
+    inline
+    void enableChecksum() {
+        shouldComputeChecksum = true;
+    }
 };
 
 int TCPSegmentReceiveCallback(const void* buf, int len);

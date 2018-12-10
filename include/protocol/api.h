@@ -9,6 +9,7 @@
 #include <string>
 
 void initProtocol();
+void cleanUp();
 int  addInterfaceWithIP(const std::string& name, in_addr ip,
                         in_addr subnet_mask);
 int  addInterfaceWithIP(const std::string& name, const std::string& ipstr,

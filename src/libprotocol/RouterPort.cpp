@@ -10,12 +10,14 @@
 
 void RouterPort::resetDevice() {
     portState = UNINITIALIZED;
-    destroyTaskThread();
-    // destroyBDUpdateThread();
-    destroyHelloThread();
+    destroyThreads();
     resetDRBDR();
     neighborTable.clear();
     taskQueue.clear();
+}
+
+RouterPort::~RouterPort() {
+    destroyThreads();
 }
 
 void RouterPort::resetDRBDR() {
@@ -59,7 +61,7 @@ void RouterPort::initHelloThread() {
     }
     helloThread = std::thread([&]() {
         std::unique_lock<std::mutex> lock(hlmu);
-        while (true) {
+        while (!shouldStop) {
             if (hlcv.wait_for(hlmu, std::chrono::seconds(10))
                 == std::cv_status::timeout) {
                 this->sendHelloPacket();
@@ -68,15 +70,23 @@ void RouterPort::initHelloThread() {
     });
 }
 
-void RouterPort::destroyHelloThread() {
-    ErrorBehavior eb("Hello thread was died", false, false);
+void RouterPort::destroyThreads() {
+    shouldStop = true;
     if (helloThread.joinable()) {
-        pthread_t p = helloThread.native_handle();
-        Pthread_cancel(p, eb);
+        // pthread_t p = helloThread.native_handle();
+        // Pthread_cancel(p, eb);
+        hlcv.notify_all();
         helloThread.join();
     } else {
         LOG(WARNING, "Hello thread is not running");
     }
+    if (taskThread.joinable()) {
+        taskQueue.push([](){return;});
+        taskThread.join();
+    } else {
+        LOG(WARNING, "Task thread is not running");
+    }
+    shouldStop = false;
 }
 
 void RouterPort::initTaskThread() {
@@ -88,22 +98,11 @@ void RouterPort::initTaskThread() {
     }
     taskThread = std::thread([&]() {
         std::shared_ptr<std::function<void(void)>> task;
-        while (true) {
+        while (!shouldStop) {
             task = taskQueue.waitAndPop();
             std::invoke(*task);
         }
     });
-}
-
-void RouterPort::destroyTaskThread() {
-    ErrorBehavior eb("Task thread was died", false, false);
-    if (taskThread.joinable()) {
-        pthread_t p = taskThread.native_handle();
-        Pthread_cancel(p, eb);
-        helloThread.join();
-    } else {
-        LOG(WARNING, "Task thread is not running");
-    }
 }
 
 void RouterPort::printRouterStatus() {

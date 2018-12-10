@@ -21,6 +21,7 @@ class Router {
 
 public:
     Router();
+    void clearRouter();
     ~Router();
     static const in_addr drip;
     static const in_addr allip;
@@ -37,5 +38,6 @@ public:
 extern Router router;
 int           addRouterDev(int dev);
 void          setRouterRID(uint16_t rid);
+void cleanupRouter();
 
 #endif  // ROUTER_H

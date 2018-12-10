@@ -211,6 +211,10 @@ Router::~Router() {
     }
 }
 
+void Router::clearRouter() {
+    devs.clear();
+}
+
 uint16_t Router::getRID() {
     if (rid)
         return *rid;
@@ -263,4 +267,8 @@ int addRouterDev(int dev) {
 
 void setRouterRID(uint16_t rid) {
     router.setRID(rid);
+}
+
+void cleanupRouter() {
+    router.clearRouter();
 }

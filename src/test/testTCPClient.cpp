@@ -3,13 +3,13 @@
 #include <protocol/api.h>
 #include <protocol/socket.h>
 
-uint8_t buffer[500000000];
+uint8_t buffer[100000000];
 int main() {
     initProtocol();
-    setRouterRID(1);
+    setRouterRID(2);
 
     int dev;
-    dev = addInterfaceWithIP("va", "172.16.176.202", "255.255.255.0");
+    dev = addInterfaceWithIP("vc", "172.16.176.202", "255.255.255.0");
     addRouterDev(dev);
 
     int fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -21,11 +21,11 @@ int main() {
     getaddrinfo("172.16.176.201", "7200", NULL, &res);
     assert(res != nullptr);
     connect(fd, res->ai_addr, sizeof(sockaddr_in));
-    for (int i = 0; i < 500000000; ++i) {
+    for (int i = 0; i < 100000000; ++i) {
         buffer[i] = (uint8_t)i;
     }
     printf("prepare to write\n");
-    printf("%lu\n", write(fd, buffer, 500000000));
+    printf("%lu\n", write(fd, buffer, 100000000));
     pause();
     freeaddrinfo(res);
 

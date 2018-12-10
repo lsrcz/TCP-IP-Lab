@@ -19,6 +19,8 @@ public:
     enum STATE { UNINITIALIZED, DOWN, STARTING, DR, BDR, DROTHER };
 
 private:
+    bool shouldStop = false;
+
     Router& router;
     STATE   portState;
 
@@ -42,16 +44,16 @@ private:
     // void destroyBDUpdateThread();
     std::thread                                helloThread;
     void                                       initHelloThread();
-    void                                       destroyHelloThread();
+    void                                       initTaskThread();
+    void                                       destroyThreads();
     threadsafeQueue<std::function<void(void)>> taskQueue;
     std::thread                                taskThread;
-    void                                       initTaskThread();
-    void                                       destroyTaskThread();
     void                                       resetDevice();
     void                                       printRouterStatus();
 
 public:
     RouterPort(Router& router);
+    ~RouterPort();
     int                startDevice(int id);
     int                sendHelloPacket();
     int                recvHelloPacket(const void* packet, int len);

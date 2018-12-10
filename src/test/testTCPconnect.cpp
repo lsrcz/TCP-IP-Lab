@@ -15,13 +15,12 @@ int main() {
     struct addrinfo* res = nullptr;
     getaddrinfo("172.16.175.201", "7777", NULL, &res);
     assert(res != nullptr);
-    sleep(3);
     connect(fd, res->ai_addr, sizeof(sockaddr_in));
 
-    sleep(1);
     close(fd);
 
 
-    pause();
     freeaddrinfo(res);
+    sleep(20);
+    cleanUp();
 }

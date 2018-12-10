@@ -103,7 +103,6 @@ ok:
 }
 
 int socketController::recv(const void* buf, int len) {
-    printf("recv\n");
     const ip*     iphdr = (const ip*)buf;
     uint8_t       iphl  = iphdr->ip_hl;
     const tcphdr* tcph  = (const tcphdr*)((uint8_t*)buf + iphl * 4);
@@ -116,12 +115,14 @@ int socketController::recv(const void* buf, int len) {
     dst.sin_port = tcph->th_dport;
     src.sin_family = AF_INET;
     dst.sin_family = AF_INET;
-    /* // TCP offload may occur when talking to real machine
-    int cksum;
-    if ((cksum = tcpChksum(tcph, len - iphl * 4, src.sin_addr, dst.sin_addr)) != 0) {
-        printf("%x\n", tcph->th_sum);
-        return -1;
-        }*/
+    /* TCP offload may occur when talking to real machine */
+    if (shouldComputeChecksum) {
+        int cksum;
+        if ((cksum = tcpChksum(tcph, len - iphl * 4, src.sin_addr, dst.sin_addr)) != 0) {
+            printf("%x\n", tcph->th_sum);
+            return -1;
+        }
+    }
     socket_t* listen_ptr = nullptr;
     for (auto& p : fd2socket) {
         auto s = p.second.get();
@@ -250,8 +251,7 @@ bool socketController::isSocket(int fd) {
 }
 
 socketController::~socketController() {
-    shouldStop = true;
-    worker.join();
+    cleanup();
 }
 
 sockaddr_in socketController::getSocketPeerAddr(int fd) {
@@ -262,4 +262,11 @@ sockaddr_in socketController::getSocketPeerAddr(int fd) {
         return addr;
     addr = iter->second->dst;
     return addr;
+}
+
+void socketController::cleanup() {
+    shouldStop = true;
+    if (worker.joinable())
+        worker.join();
+    fd2socket.clear();
 }

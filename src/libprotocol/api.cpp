@@ -2,12 +2,18 @@
 #include <protocol/IPDispatcher.h>
 #include <protocol/api.h>
 #include <protocol/socketController.h>
+#include <protocol/Router.h>
 
 void initProtocol() {
     setFrameReceiveCallback(defaultFrameReceiveCallback);
     addFrameDispatcher(ETHERTYPE_ARP, arpFrameReceiveCallback);
     addFrameDispatcher(ETHERTYPE_IP, defaultIPPacketReceiveCallback);
     addIPPacketDispatcher(IPPROTO_TCP, TCPSegmentReceiveCallback);
+}
+
+void cleanUp() {
+    socketController::getInstance().cleanup();
+    cleanupRouter();
 }
 
 void removeInterfaceAndCleanup(int id) {

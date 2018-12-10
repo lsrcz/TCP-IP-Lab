@@ -13,6 +13,7 @@
 #include <utils/lockutils.h>
 #include <utils/timeutils.h>
 #include <list>
+#include <atomic>
 
 class socket_t;
 class socketController;
@@ -67,6 +68,9 @@ class tcb {
     std::deque<uint8_t> valid;
     std::list<std::pair<uint32_t, uint32_t>> hole;
     bool needACK = false;
+    std::atomic<bool> ackSeen;
+    std::atomic<uint64_t> lastACKTime;
+    uint64_t lastzerowintime;
 
     // transmit timing
     double              srtt;
@@ -75,6 +79,13 @@ class tcb {
     static const double beta;
     static const double rtoubound;
     static const double rtolbound;
+
+    // congestion control
+    tcpSeq lastack;
+    std::atomic<int> ackcounting;
+    std::mutex ccmu;
+    double cwnd;
+    uint32_t ssthresh;
 
     tcphdr getHdr(uint8_t flags);//, uint16_t win);
     int    setMSSOpt(uint8_t* buf);

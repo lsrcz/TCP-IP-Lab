@@ -33,8 +33,8 @@ void pcapHandler(u_char* user, const struct pcap_pkthdr* h,
     handler_arg* arg = (handler_arg*)user;
     int          id  = arg->id;
     char         msgBuf[1000];
-    printf("\033[33mpcap cap cap\033[0m\n");
-    printf("%ld\n", getTimeStamp());
+    //printf("\033[33mpcap cap cap\033[0m\n");
+    //printf("%ld\n", getTimeStamp());
     if (h->len != h->caplen) {
         sprintf(msgBuf, "Abandon partial packet on id %d.", id);
         // logPrint(WARNING, msgBuf);
@@ -47,8 +47,8 @@ void pcapHandler(u_char* user, const struct pcap_pkthdr* h,
             // logPrint(ERROR, msgBuf);
         }
     }
-    printf("%ld\n", getTimeStamp());
-    printf("\033[33mexit pcap\033[0m\n");
+    //printf("%ld\n", getTimeStamp());
+    //printf("\033[33mexit pcap\033[0m\n");
 }
 
 /**
