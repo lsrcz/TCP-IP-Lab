@@ -74,7 +74,7 @@ int socket_t::listen(int backlog) {
 int socket_t::accept(struct sockaddr_in* addr, socklen_t addrlen) {
     // no EAGAIN, EBADF, EFAULT, EINTR, EMFILE
     std::unique_lock<std::mutex> lock(mu);
-    std::unique_lock            acclock(accmu);
+    std::unique_lock             acclock(accmu);
     if (!listenFlag)
         return EINVAL;
     while (est_queue.empty()) {
@@ -96,23 +96,24 @@ int socket_t::recv(const void* buf, int len) {
     return t.recv(buf, len);
 }
 
-int socket_t::genConnectFD(sockaddr_in src, sockaddr_in dst, tcpSeq rcv_nxt, tcpSeq irs) {
-    auto ptr = std::make_unique<socket_t>(sc, src, dst);
+int socket_t::genConnectFD(sockaddr_in src, sockaddr_in dst, tcpSeq rcv_nxt,
+                           tcpSeq irs) {
+    auto ptr    = std::make_unique<socket_t>(sc, src, dst);
     auto rawptr = ptr.get();
     ptr->lock();
-    ptr->father = this; // so, the child should be disabled early
-    ptr->t.state = TCP_SYN_RECV;
-    ptr->t.irs = irs;
-    ptr->t.rcv_nxt = rcv_nxt;
+    ptr->father        = this;  // so, the child should be disabled early
+    ptr->t.state       = TCP_SYN_RECV;
+    ptr->t.irs         = irs;
+    ptr->t.rcv_nxt     = rcv_nxt;
     ptr->t.bufferBegin = rcv_nxt;
-    int fd = sc.registerSocket(std::move(ptr));
+    int fd             = sc.registerSocket(std::move(ptr));
     syn_queue.push_back(fd);
     rawptr->unlock();
-    rawptr->t.send(TH_ACK|TH_SYN);
+    rawptr->t.send(TH_ACK | TH_SYN);
     return fd;
 }
 
-int socket_t::write(const void *buf, size_t nbyte) {
+int socket_t::write(const void* buf, size_t nbyte) {
     if (isListen()) {
         errno = ENOTCONN;
         return -1;
@@ -124,7 +125,7 @@ int socket_t::write(const void *buf, size_t nbyte) {
     return t.write(buf, nbyte);
 }
 
-int socket_t::read(void *buf, size_t nbyte) {
+int socket_t::read(void* buf, size_t nbyte) {
     if (isListen()) {
         errno = ENOTCONN;
         return -1;

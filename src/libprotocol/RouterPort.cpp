@@ -81,7 +81,7 @@ void RouterPort::destroyThreads() {
         LOG(WARNING, "Hello thread is not running");
     }
     if (taskThread.joinable()) {
-        taskQueue.push([](){return;});
+        taskQueue.push([]() { return; });
         taskThread.join();
     } else {
         LOG(WARNING, "Task thread is not running");

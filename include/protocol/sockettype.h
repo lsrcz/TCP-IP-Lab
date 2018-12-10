@@ -1,12 +1,12 @@
 #ifndef SRC_SOCKET_H
 #define SRC_SOCKET_H
 
+#include <condition_variable>
 #include <list>
 #include <mutex>
 #include <protocol/TCP.h>
 #include <protocol/socketController.h>
 #include <set>
-#include <condition_variable>
 
 class socketController;
 class socket_t {
@@ -27,7 +27,7 @@ class socket_t {
     /* listenfd */
     std::list<int>          syn_queue;
     std::list<int>          est_queue;
-    uint32_t                     backlog = 0;
+    uint32_t                backlog = 0;
     std::mutex              accmu;
     std::condition_variable acccv;
 
@@ -35,27 +35,27 @@ class socket_t {
 
     static bool sockaddr_in_iszero(sockaddr_in x);
 
-
 public:
     socket_t(socketController& sc);
     socket_t(socketController& sc, sockaddr_in src, sockaddr_in dst);
-    int bind(const struct sockaddr_in* address);
-    int connect(const sockaddr_in* address);
-    int listen(int backlog);
-    int recv(const void* buf, int len);
-    int accept(sockaddr_in*addr, socklen_t len);
-    int close();
-    int write(const void *buf, size_t nbyte);
-    int read(void *buf, size_t nbyte);
-    int genConnectFD(sockaddr_in src, sockaddr_in dst, tcpSeq rcv_nxt, tcpSeq irs);
-    int getFD();
-    int notifyEstFather();
+    int         bind(const struct sockaddr_in* address);
+    int         connect(const sockaddr_in* address);
+    int         listen(int backlog);
+    int         recv(const void* buf, int len);
+    int         accept(sockaddr_in* addr, socklen_t len);
+    int         close();
+    int         write(const void* buf, size_t nbyte);
+    int         read(void* buf, size_t nbyte);
+    int         genConnectFD(sockaddr_in src, sockaddr_in dst, tcpSeq rcv_nxt,
+                             tcpSeq irs);
+    int         getFD();
+    int         notifyEstFather();
     inline void setSrc(sockaddr_in x) {
-        src = x;
+        src   = x;
         t.src = x;
     }
     inline void setDst(sockaddr_in x) {
-        dst = x;
+        dst   = x;
         t.dst = x;
     }
 
@@ -98,7 +98,7 @@ public:
     }
     inline bool synQueueIsFull() {
         std::unique_lock<std::mutex> lock(accmu);
-        const int syn_backlog = 256; // set as Linux
+        const int                    syn_backlog = 256;  // set as Linux
         return syn_queue.size() >= syn_backlog;
     }
     inline bool estQueueIsFull() {

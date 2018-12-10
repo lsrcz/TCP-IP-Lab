@@ -38,6 +38,6 @@ public:
 extern Router router;
 int           addRouterDev(int dev);
 void          setRouterRID(uint16_t rid);
-void cleanupRouter();
+void          cleanupRouter();
 
 #endif  // ROUTER_H

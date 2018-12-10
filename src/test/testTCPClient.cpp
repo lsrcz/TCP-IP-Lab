@@ -4,15 +4,15 @@
 #include <protocol/socket.h>
 
 uint8_t buffer[100000000];
-int main() {
+int     main() {
     initProtocol();
     setRouterRID(2);
     int dev;
     dev = addInterfaceWithIP("vc", "172.16.176.202", "255.255.255.0");
     addRouterDev(dev);
 
-    int fd = socket(AF_INET, SOCK_STREAM, 0);
-    struct addrinfo *res = nullptr;
+    int              fd  = socket(AF_INET, SOCK_STREAM, 0);
+    struct addrinfo* res = nullptr;
     getaddrinfo("172.16.176.202", "3230", NULL, &res);
     assert(res != nullptr);
     bind(fd, res->ai_addr, sizeof(sockaddr_in));
@@ -29,5 +29,4 @@ int main() {
 
     freeaddrinfo(res);
     cleanUp();
-
 }

@@ -15,9 +15,9 @@
 #include <unordered_map>
 #include <utils/logutils.h>
 #include <utils/netutils.h>
+#include <utils/timeutils.h>
 #include <vector>
 #include <wrapper/unix_file.h>
-#include <utils/timeutils.h>
 
 extern frameReceiveCallback frCallback;
 extern std::shared_mutex    muFrCallback;
@@ -33,8 +33,8 @@ void pcapHandler(u_char* user, const struct pcap_pkthdr* h,
     handler_arg* arg = (handler_arg*)user;
     int          id  = arg->id;
     char         msgBuf[1000];
-    //printf("\033[33mpcap cap cap\033[0m\n");
-    //printf("%ld\n", getTimeStamp());
+    // printf("\033[33mpcap cap cap\033[0m\n");
+    // printf("%ld\n", getTimeStamp());
     if (h->len != h->caplen) {
         sprintf(msgBuf, "Abandon partial packet on id %d.", id);
         // logPrint(WARNING, msgBuf);
@@ -47,8 +47,8 @@ void pcapHandler(u_char* user, const struct pcap_pkthdr* h,
             // logPrint(ERROR, msgBuf);
         }
     }
-    //printf("%ld\n", getTimeStamp());
-    //printf("\033[33mexit pcap\033[0m\n");
+    // printf("%ld\n", getTimeStamp());
+    // printf("\033[33mexit pcap\033[0m\n");
 }
 
 /**
@@ -93,7 +93,7 @@ bool device_t::init() {
 
     eb.setPcapError();
     pcap_t* pcap_dev = Pcap_create(name.c_str(), errbuf, eb, return false);
-    //pcap_t* pcap_dev = pcap_open_live(name.c_str(), 65536, 0, 10, errbuf);
+    // pcap_t* pcap_dev = pcap_open_live(name.c_str(), 65536, 0, 10, errbuf);
     std::unique_ptr<pcap_t, std::function<void(pcap_t*)>> ppcap_dev(
         pcap_dev, [](pcap_t* p) { pcap_close(p); });
     pcap_set_immediate_mode(ppcap_dev.get(), 1);

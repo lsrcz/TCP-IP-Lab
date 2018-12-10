@@ -19,7 +19,6 @@ int main() {
 
     close(fd);
 
-
     freeaddrinfo(res);
     sleep(20);
     cleanUp();

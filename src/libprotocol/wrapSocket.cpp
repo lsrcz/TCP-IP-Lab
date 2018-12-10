@@ -23,7 +23,8 @@ int __wrap_socket(int domain, int type, int protocol) {
     return socketController::getInstance().socket();
 }
 
-int __wrap_bind(int socket, const struct sockaddr* address, socklen_t address_len) {
+int __wrap_bind(int socket, const struct sockaddr* address,
+                socklen_t address_len) {
     const struct sockaddr_in* addrin = (const struct sockaddr_in*)address;
     if (addrin->sin_family != AF_INET) {
         errno = EINVAL;
@@ -54,18 +55,18 @@ int __wrap_connect(int socket, const struct sockaddr* address,
     return socketController::getInstance().connect(socket, addrin);
 }
 
-int __wrap_accept(int socket, struct sockaddr* address, socklen_t *addrlen) {
+int __wrap_accept(int socket, struct sockaddr* address, socklen_t* addrlen) {
     int fd = socketController::getInstance().accept(socket, address, addrlen);
     return fd;
 }
 
-ssize_t __wrap_read(int fd, void *buf, size_t nbyte) {
+ssize_t __wrap_read(int fd, void* buf, size_t nbyte) {
     if (!socketController::getInstance().isSocket(fd))
         return __real_read(fd, buf, nbyte);
     return socketController::getInstance().read(fd, buf, nbyte);
 }
 
-ssize_t __wrap_write(int fd, const void *buf, size_t nbyte) {
+ssize_t __wrap_write(int fd, const void* buf, size_t nbyte) {
     if (!socketController::getInstance().isSocket(fd))
         return __real_write(fd, buf, nbyte);
     return socketController::getInstance().write(fd, buf, nbyte);

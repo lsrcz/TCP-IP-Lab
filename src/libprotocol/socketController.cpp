@@ -12,8 +12,8 @@ socketController::socketController() {
             {
                 std::lock_guard<std::mutex> lock1(needClosemu);
                 while (!needClose.empty()) {
-                    auto iter = needClose.begin();
-                    socket_t *ptr = fd2socket.find(*iter)->second.get();
+                    auto      iter = needClose.begin();
+                    socket_t* ptr  = fd2socket.find(*iter)->second.get();
                     ptr->close();
                     closing.insert(*iter);
                     needClose.erase(iter);
@@ -25,9 +25,9 @@ socketController::socketController() {
                     }
                 }
                 for (int fd : willClose) {
-                    socket_t *ptr = fd2socket[fd].get();
-                    auto src = ptr->src;
-                    auto iter = listeningSet.find(src);
+                    socket_t* ptr  = fd2socket[fd].get();
+                    auto      src  = ptr->src;
+                    auto      iter = listeningSet.find(src);
                     if (iter != listeningSet.end())
                         listeningSet.erase(iter);
                     iter = connectedSet.find(src);
@@ -40,7 +40,7 @@ socketController::socketController() {
                 }
             }
         }
-        });
+    });
 }
 
 socketController& socketController::getInstance() {
@@ -109,16 +109,18 @@ int socketController::recv(const void* buf, int len) {
     sockaddr_in   src, dst;
     memset(&src, 0, sizeof(src));
     memset(&dst, 0, sizeof(dst));
-    src.sin_addr = iphdr->ip_src;
-    src.sin_port = tcph->th_sport;
-    dst.sin_addr = iphdr->ip_dst;
-    dst.sin_port = tcph->th_dport;
+    src.sin_addr   = iphdr->ip_src;
+    src.sin_port   = tcph->th_sport;
+    dst.sin_addr   = iphdr->ip_dst;
+    dst.sin_port   = tcph->th_dport;
     src.sin_family = AF_INET;
     dst.sin_family = AF_INET;
     /* TCP offload may occur when talking to real machine */
     if (shouldComputeChecksum) {
         int cksum;
-        if ((cksum = tcpChksum(tcph, len - iphl * 4, src.sin_addr, dst.sin_addr)) != 0) {
+        if ((cksum =
+                 tcpChksum(tcph, len - iphl * 4, src.sin_addr, dst.sin_addr))
+            != 0) {
             printf("%x\n", tcph->th_sum);
             return -1;
         }
@@ -144,7 +146,7 @@ int TCPSegmentReceiveCallback(const void* buf, int len) {
     return socketController::getInstance().recv(buf, len);
 }
 
-int socketController::registerSocket(std::unique_ptr<socket_t> &&ptr) {
+int socketController::registerSocket(std::unique_ptr<socket_t>&& ptr) {
     int fd = 0;
     if (freelist.empty()) {
         fd = nxtfd++;
@@ -173,7 +175,8 @@ int socketController::bind(int socket, const struct sockaddr_in* addr) {
         errno = EADDRINUSE;
         return -1;
     }
-    if (iter->second->isListen() || iter->second->isConnect() || iter->second->isReset()) {
+    if (iter->second->isListen() || iter->second->isConnect()
+        || iter->second->isReset()) {
         errno = EINVAL;
         return -1;
     }
@@ -187,7 +190,8 @@ int socketController::listen(int socket, int backlog) {
         errno = ENOTSOCK;
         return -1;
     }
-    if (iter->second->isListen() || iter->second->isConnect() || iter->second->isReset()) {
+    if (iter->second->isListen() || iter->second->isConnect()
+        || iter->second->isReset()) {
         errno = EINVAL;
         return -1;
     }
@@ -212,7 +216,7 @@ int socketController::close(int fd) {
     return 0;
 }
 
-int socketController::read(int fd, void *buf, size_t nbyte) {
+int socketController::read(int fd, void* buf, size_t nbyte) {
     auto iter = fd2socket.find(fd);
     if (iter == fd2socket.end()) {
         errno = EBADF;
@@ -221,7 +225,7 @@ int socketController::read(int fd, void *buf, size_t nbyte) {
     return iter->second->read(buf, nbyte);
 }
 
-int socketController::write(int fd, const void *buf, size_t nbyte) {
+int socketController::write(int fd, const void* buf, size_t nbyte) {
     auto iter = fd2socket.find(fd);
     if (iter == fd2socket.end()) {
         errno = EBADF;
@@ -230,7 +234,8 @@ int socketController::write(int fd, const void *buf, size_t nbyte) {
     return iter->second->write(buf, nbyte);
 }
 
-int socketController::accept(int fd, struct sockaddr* address, socklen_t *addrlen) {
+int socketController::accept(int fd, struct sockaddr* address,
+                             socklen_t* addrlen) {
     auto iter = fd2socket.find(fd);
     if (iter == fd2socket.end()) {
         errno = ENOTSOCK;
@@ -240,7 +245,7 @@ int socketController::accept(int fd, struct sockaddr* address, socklen_t *addrle
         errno = EINVAL;
         return -1;
     }
-    int ret = iter->second->accept((sockaddr_in*)address, *addrlen);
+    int ret  = iter->second->accept((sockaddr_in*)address, *addrlen);
     *addrlen = sizeof(sockaddr_in);
     return ret;
 }
@@ -255,7 +260,7 @@ socketController::~socketController() {
 }
 
 sockaddr_in socketController::getSocketPeerAddr(int fd) {
-    auto iter = fd2socket.find(fd);
+    auto        iter = fd2socket.find(fd);
     sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     if (iter == fd2socket.end())

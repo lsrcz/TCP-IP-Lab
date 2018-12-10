@@ -3,8 +3,8 @@
 
 #include <cstdint>
 #include <deque>
-#include <mutex>
 #include <list>
+#include <mutex>
 #include <protocol/TCPSeq.h>
 
 struct tcpBufferItem {
@@ -29,18 +29,19 @@ public:
     tcpBuffer();
     tcpBufferItem get();
     void          put(const uint8_t* b, int len);
-    void putback(tcpBufferItem i);
+    void          putback(tcpBufferItem i);
 };
 
 struct tcpBufferWithTimeItem {
     uint8_t* buf;
-    int len;
-    tcpSeq seq;
+    int      len;
+    tcpSeq   seq;
     uint64_t firstSendTime;
     uint64_t lastSendTime;
-    int retransCount = 0;
-    int p = 1;
-    tcpBufferWithTimeItem(const uint8_t *buf, int len, tcpSeq seq, uint64_t sendTime);
+    int      retransCount = 0;
+    int      p            = 1;
+    tcpBufferWithTimeItem(const uint8_t* buf, int len, tcpSeq seq,
+                          uint64_t sendTime);
     tcpBufferWithTimeItem(const tcpBufferWithTimeItem& rhs);
     tcpBufferWithTimeItem(tcpBufferWithTimeItem&& rhs);
     tcpBufferWithTimeItem& operator=(const tcpBufferWithTimeItem& rhs);
@@ -50,12 +51,13 @@ struct tcpBufferWithTimeItem {
 
 class tcpBufferWithTime {
     std::mutex mu;
-    bool have_nolock();
- public:
+    bool       have_nolock();
+
+public:
     bool have();
     tcpBufferWithTime();
-    void clearBefore(tcpSeq s);
-    std::list<tcpBufferWithTimeItem> &raw();
+    void                              clearBefore(tcpSeq s);
+    std::list<tcpBufferWithTimeItem>& raw();
 };
 
 #endif  // SRC_TCP_BUFFER_H

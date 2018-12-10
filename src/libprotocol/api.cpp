@@ -1,8 +1,8 @@
 #include <arpa/inet.h>
 #include <protocol/IPDispatcher.h>
+#include <protocol/Router.h>
 #include <protocol/api.h>
 #include <protocol/socketController.h>
-#include <protocol/Router.h>
 
 void initProtocol() {
     setFrameReceiveCallback(defaultFrameReceiveCallback);
