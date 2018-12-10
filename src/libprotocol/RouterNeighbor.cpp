@@ -34,7 +34,7 @@ int RouterNeighbor::update(RouterPort& rp, const in_addr* dr,
     // std::function<void(void)> task1 = task;
     // std::invoke(task1);
     // rp.removeNeighbor(ip);
-    timeout.setTimer(13s, std::move(task));
+    timeout.setTimer(40s, std::move(task));
     return 0;
 }
 

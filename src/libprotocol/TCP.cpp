@@ -21,7 +21,7 @@ tcb::tcb(socket_t& socket) : socket(socket) {
     snd_una = snd_nxt = iss;
     srtt            = 0;
     rto             = rtolbound;
-    rcv_wnd = 0xffff;
+    rcv_wnd = 20000;
     mss = 1460;
     ackcounting = 0;
     ssthresh = 0xffff;
@@ -148,7 +148,7 @@ tcb::tcb(socket_t& socket) : socket(socket) {
                 } else if (passiveClose) {
                     std::unique_lock<std::mutex> lock(mu); // block all
                     sendCtrlBuf();
-                    statecv.wait(lock);
+                    statecv.wait_for(lock, 30s);
                     sendCtrlBuf();
                     //-printf("116state: %d\n", state);
                 } else {
@@ -194,7 +194,7 @@ tcphdr tcb::getHdr(uint8_t flags) {
     hdr.th_ack   = htonl32(rcv_nxt);
     hdr.th_off   = 0;  // should be filled by tcp_cp
     hdr.th_flags = flags;
-    hdr.th_win   = htonl16(rcv_wnd);
+    hdr.th_win   = htonl16(std::min((uint64_t)65535, rcv_wnd));
     // //-printf("getHdr:   %u\n", (uint32_t)hdr.th_win)
     hdr.th_urp   = 0;  // won't implement
     return hdr;
@@ -422,8 +422,6 @@ int tcb::sendBuf() {
             }
             return 0;
         }
-        printf("%d\n", win);
-        printf("%u, %u, %u\n", (uint32_t)snd_nxt, (uint32_t)snd_una, (uint32_t)cwnd);
         tcpBufferItem i = snd_buf.get();
         if (snd_nxt + i.len > snd_una + snd_wnd) {
             uint32_t oklen = snd_wnd - (snd_nxt - snd_una);
@@ -748,7 +746,6 @@ int tcb::recv(const void* buf, int len) {
                     {
                         lastACKTime.store(getTimeStamp());
                         ackSeen.store(true);
-                        
                         std::lock_guard<std::mutex> lock(ccmu);
                         if (cwnd < ssthresh) {
                             // printf("p\n");
@@ -949,6 +946,9 @@ void tcb::copyData(const uint8_t* buf, uint32_t len, uint32_t seq) {
     if (rcv_nxt != old_rcv_nxt)
         swcv.notify_all();
     rcv_wnd = rcv_wnd + old_rcv_nxt - rcv_nxt;
+    if (rcv_wnd <= 20000) {
+        rcv_wnd = std::min(1000000 - (rcv_nxt - bbegin), (uint32_t)rcv_wnd + 65535);
+    }
 }
 
 int tcb::close() {
