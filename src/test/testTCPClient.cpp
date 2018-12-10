@@ -7,7 +7,6 @@ uint8_t buffer[100000000];
 int main() {
     initProtocol();
     setRouterRID(2);
-
     int dev;
     dev = addInterfaceWithIP("vc", "172.16.176.202", "255.255.255.0");
     addRouterDev(dev);
@@ -27,6 +26,8 @@ int main() {
     printf("prepare to write\n");
     printf("%lu\n", write(fd, buffer, 100000000));
     pause();
+
     freeaddrinfo(res);
+    cleanUp();
 
 }
